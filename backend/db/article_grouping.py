@@ -18,18 +18,22 @@ from db.query_helpers import _build_filter_conditions, _build_order_clause
 def _candidate_key(row):
     (article_no, trade, estate_type, building, floor, area, price, rent,
      direction, same_count) = row
-    # 네이버 실측 묶음(sameAddrCnt>1 저장분): 동·층정보·면적·가격 시그니처로 묶음
+    # 네이버 실측 묶음(sameAddrCnt>1 저장분): 네이버는 같은 호실도 층표시(고/36·중/36)와
+    # 등록 대표별로 행을 나눠 보여주므로 시그니처에 층표시를 포함한다(실측: 파크리오 84㎡
+    # 매매 네이버 UI 177 = 대표 행 수 그 자체).
     if same_count is not None and same_count > 1 and trade and building \
             and area is not None and price is not None:
-        return ("naver", trade, building, area, price)
-    # 폴백: 보수적 정확 속성 추정 (기존 규칙)
-    if (same_count is None or same_count <= 1 or not trade or not estate_type
-            or not building or floor is None or area is None or price is None
-            or not direction or (trade in ("월세", "단기임대") and rent is None)):
-        return ("single", article_no)
-    return ("conservative", trade, estate_type, building, floor, area,
-            price, rent if trade in ("월세", "단기임대") else None,
-            direction)
+        return ("naver", trade, building, floor, area, price)
+    # cnt<=1: 네이버도 이런 등록은 대표 행 각각을 보여준다 — 같은 (동·층·면적·가격)
+    # 시그니처끼리 1그룹으로 모아되 각 행은 원본 유지(실측: 파크리오 single 82행 →
+    # 네이버식 70행).
+    if (same_count is None or same_count <= 1) and trade and building \
+            and floor is not None and area is not None and price is not None \
+            and not (trade in ("월세", "단기임대") and rent is None):
+        return ("unique", trade, building, floor, area, price,
+                rent if trade in ("월세", "단기임대") else None)
+    # 폴백: 속성 일부 누락 — 보수적으로 각각 분리
+    return ("single", article_no)
 
 
 def get_grouped_articles_by_complex(

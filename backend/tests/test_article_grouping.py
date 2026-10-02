@@ -45,9 +45,13 @@ def test_grouped_count_and_members_across_pages(client, db, approved_headers):
 
 
 def test_ambiguous_or_different_units_never_merge(client, db, approved_headers):
-    """naver 미동기화(same=3이지만 시그니처 서로 다른) 원본은 보수 추정으로 분리 유지."""
+    """속성 완전한 등록은 시그니처별 1행(네이버식), 속성 누락분만 각각 분리.
+
+    네이버는 같은 (동·층·면적·가격) 등록 여러 건도 대표 행 1개로 보여주므로
+    A1~A5·A8은 각 시그니처 1그룹, 층 누락 A6·A7만 각각 분리된다.
+    """
     add(db, "A1", same=None)
-    add(db, "A2", same=None, direction="남서향")
+    add(db, "A2", same=None, direction="남서향")   # 방향 달라도 같은 시그니처
     add(db, "A3", same=None, area=85)
     add(db, "A4", same=None, price=124000)
     add(db, "A5", same=None, trade="전세")
@@ -56,8 +60,10 @@ def test_ambiguous_or_different_units_never_merge(client, db, approved_headers):
     add(db, "A8", same=1)
     add(db, "A9", same=None, active=False)
     d = get(client, approved_headers).json()
-    assert (d["total"], d["raw_total"]) == (8, 8)
-    assert all(a["group_count"] == 1 for a in d["articles"])
+    # A1+A2+A8(동일 시그니처·A8은 cnt=1이지만 속성 완전) 1 + A3 1 + A4 1 + A5 1 + A6 1 + A7 1 = 6
+    assert (d["total"], d["raw_total"]) == (6, 8)
+    counts = sorted(a["group_count"] for a in d["articles"])
+    assert counts == [1, 1, 1, 1, 1, 3]  # A1+A2+A8 묶음 1개(3건), A3~A7 각각 분리
 
 
 def test_naver_synced_signature_groups_like_naver(client, db, approved_headers):

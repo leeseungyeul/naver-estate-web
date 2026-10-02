@@ -71,8 +71,8 @@ def update_same_addr_counts_from_naver(db: Session, complex_no: str) -> dict:
         if not result.get("isMoreData", False):
             break
         page += 1
-        if page > 10:
-            logger.warning("그룹 수집 10페이지 초과 중단: complex %s", complex_no)
+        if page > 40:
+            logger.warning("그룹 수집 40페이지 초과 중단: complex %s", complex_no)
             break
     db.commit()
     return {"groups": groups, "matched": matched, "unmatched": unmatched}
