@@ -74,6 +74,7 @@ vi.mock("@/hooks/useSmartBack", () => ({
 vi.mock("@/hooks/useSessionToken", () => ({
   useSessionToken: () => ({
     sessionToken: undefined,
+    tokenReady: true,
     tokenError: false,
     dismissTokenError: vi.fn(),
   }),
@@ -143,6 +144,25 @@ describe("ComplexDetailPage 정보 위계 (PR 6d 데스크톱 통합 후)", () =
       const tens = screen.getAllByText("10개");
       expect(tens.length).toBeGreaterThanOrEqual(2);
     });
+  });
+});
+
+describe("매물 묶음 총계 (원본 건수는 별도 보존)", () => {
+  it("기본은 추정 묶음 수를 표시하고 원본 보기로 전환한다", async () => {
+    const api = await import("@/lib/api");
+    vi.mocked(api.getArticles).mockImplementation(async (_no, _filters, _token, grouped) =>
+      grouped
+        ? { articles: [], total: 21, raw_total: 75, page: 1, page_size: 10 }
+        : { articles: [], total: 75, page: 1, page_size: 10 });
+    try {
+      renderPage();
+      await waitFor(() => expect(screen.getByText("추정 묶음 21개 · 원본 등록 75건")).toBeInTheDocument());
+      fireEvent.click(screen.getByRole("button", { name: "원본 매물 보기" }));
+      await waitFor(() => expect(screen.getByText("원본 등록 75건")).toBeInTheDocument());
+      expect(vi.mocked(api.getArticles)).toHaveBeenCalledWith("12345", expect.any(Object), undefined, false);
+    } finally {
+      vi.mocked(api.getArticles).mockResolvedValue({ articles: [], total: 0 } as never);
+    }
   });
 });
 

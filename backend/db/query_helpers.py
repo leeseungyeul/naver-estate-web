@@ -5,7 +5,7 @@ import re
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import and_, or_, text
+from sqlalchemy import and_, func, or_, text
 
 from db.models import Article
 
@@ -178,5 +178,12 @@ def _build_order_clause(sort_by: str):
         "maintenance_desc": Article.numeric_maintenance_cost.desc(),
         "confirm_asc": Article.article_confirm_ymd.asc(),
         "confirm_desc": Article.article_confirm_ymd.desc(),
+        # 동별 정렬 — 같은 동끼리 모아 보기. 길이+이름 순으로 2동<10동 꼬임 방지,
+        # 2차 정렬은 가격 내림(같은 동에서 비싼 매물부터).
+        "building_asc": (
+            func.length(Article.building_name).asc(),
+            Article.building_name.asc(),
+            Article.numeric_price.desc(),
+        ),
     }
     return sort_map.get(sort_by, Article.article_confirm_ymd.desc())

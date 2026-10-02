@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Search } from "lucide-react";
 import type { Article } from "@/types";
 import { M2_TO_PYEONG, TRADE_TYPE_COLORS, TRADE_TYPE_DEFAULT_COLOR, ESTATE_TYPE_COLORS, ESTATE_TYPE_DEFAULT_COLOR } from "@/lib/constants";
@@ -55,7 +55,8 @@ function ArticleCardMobile({ articles, onRowClick, selectedArticleNos, onSelecti
         <label className="flex items-center gap-2 px-1 text-sm text-gray-500">
           <input
             type="checkbox"
-            checked={articles.length > 0 && articles.every(a => selectedArticleNos?.has(a.article_no))}
+            checked={articles.length > 0 && articles.every(a =>
+              (a.group_members ?? [a]).every(member => selectedArticleNos?.has(member.article_no)))}
             onChange={(e) => onSelectAll?.(e.target.checked, articles)}
             className="w-4 h-4 rounded border-gray-300"
           />
@@ -63,30 +64,60 @@ function ArticleCardMobile({ articles, onRowClick, selectedArticleNos, onSelecti
         </label>
       )}
       {articles.map((art) => (
-        viewMode === "compact" ? (
-          <ArticleCompactRow
-            key={art.article_no}
-            article={art}
-            onClick={onRowClick}
-            selected={selectedArticleNos?.has(art.article_no)}
-            onCheck={onSelectionChange}
-          />
-        ) : (
-          <ArticleCardItem
-            key={art.article_no}
-            article={art}
-            onClick={onRowClick}
-            selected={selectedArticleNos?.has(art.article_no)}
-            onCheck={onSelectionChange}
-            viewMode={viewMode}
-          />
-        )
+        <MobileGroupItem key={art.article_no} article={art} viewMode={viewMode}
+          onClick={onRowClick} selectedArticleNos={selectedArticleNos} onCheck={onSelectionChange} />
       ))}
     </div>
   );
 }
 
 export default memo(ArticleCardMobile);
+
+function MobileGroupItem({ article: art, viewMode, onClick, selectedArticleNos, onCheck }: {
+  article: Article;
+  viewMode: ArticleViewMode;
+  onClick?: (articleNo: string) => void;
+  selectedArticleNos?: Set<string>;
+  onCheck?: (articleNo: string, checked: boolean) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div>
+      {viewMode === "compact" ? (
+        <ArticleCompactRow article={art} onClick={onClick}
+          selected={selectedArticleNos?.has(art.article_no)} onCheck={onCheck} />
+      ) : (
+        <ArticleCardItem article={art} onClick={onClick}
+          selected={selectedArticleNos?.has(art.article_no)} onCheck={onCheck} viewMode={viewMode} />
+      )}
+      {art.group_count != null && art.group_count > 1 && (
+        <div className="rounded-b border border-t-0 bg-blue-50/50 px-3 py-1.5 text-xs">
+          <button type="button" className="text-blue-700 font-semibold"
+            aria-label={`추정 묶음 ${art.group_count}건 ${expanded ? "접기" : "펼치기"}`}
+            aria-expanded={expanded} onClick={() => setExpanded(v => !v)}>
+            추정 묶음 {art.group_count}건 {expanded ? "▲" : "▼"}
+          </button>
+          {expanded && (
+            <div className="space-y-1 mt-2">
+              <p className="text-gray-600">동일 호실 확정 아님 · 원본 등록 {art.group_members?.length ?? art.group_count}건</p>
+              {art.group_members?.map(member => (
+                <div key={member.article_no} className="flex items-center gap-2 rounded bg-white p-1">
+                  {onCheck && <input type="checkbox" aria-label={`묶음 원본 매물 ${member.article_no} 선택`}
+                    checked={!!selectedArticleNos?.has(member.article_no)}
+                    onChange={e => onCheck(member.article_no, e.target.checked)} />}
+                  <button type="button" className="text-blue-700" onClick={() => onClick?.(member.article_no)}
+                    aria-label={`원본 매물 ${member.article_no} ${member.realtor_name || "중개사 미상"} 상세 보기`}>
+                    {member.realtor_name || "중개사 미상"} · {member.deal_or_warrant_prc || "가격 미상"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const ArticleCardItem = memo(function ArticleCardItem({ article: art, onClick, selected, onCheck, viewMode }: {
   article: Article; onClick?: (no: string) => void; selected?: boolean; onCheck?: (articleNo: string, checked: boolean) => void; viewMode: "large" | "medium";

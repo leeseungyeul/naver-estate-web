@@ -15,7 +15,7 @@ import { useFilterParams } from "@/hooks/useFilterParams";
 import { useFavoriteStatus } from "@/hooks/useFavorites";
 import { useCompare } from "@/hooks/useCompare";
 import { useCrawlAction } from "@/hooks/useCrawlAction";
-import type { Article, ArticleFilters, FilterOptions } from "@/types";
+import type { Article, ArticleFilters, FilterOptions, ArticlesResponse } from "@/types";
 import FilterBar from "@/components/FilterBar";
 import FilterBarMobileSheet from "@/components/FilterBarMobileSheet";
 import FilterChipsSummary from "@/components/filter/FilterChipsSummary";
@@ -52,6 +52,7 @@ export default function ComplexDetailPage() {
   const compare = useCompare();
   const [selectedArticleNos, setSelectedArticleNos] = useState<Set<string>>(new Set());
   const [filterOpen, setFilterOpen] = useState(true);
+  const [groupDuplicates, setGroupDuplicates] = useState(true);
   const [selectedArticle, setSelectedArticle] = useState<string | null>(null);
   const [error, setError] = useState("");
   const { sessionToken, tokenError, tokenReady, dismissTokenError } = useSessionToken();
@@ -83,19 +84,20 @@ export default function ComplexDetailPage() {
     ...filters,
     page: currentPage,
     page_size: pageSize,
-  });
+  }, groupDuplicates);
 
-  const articlesQuery = useQuery({
+  const articlesQuery = useQuery<ArticlesResponse>({
     queryKey: articlesQueryKey,
     queryFn: () => getArticles(complexNo, {
       ...filters,
       page: currentPage,
       page_size: pageSize,
-    }, sessionToken),
+    }, sessionToken, groupDuplicates),
     // tokenReady 가드: 토큰 해석 완료 후 실행 — 토큰 도착 전 undefined 로 먼저 쏴서
     // 403→queryKey 불변 refetch 안 됨(승인 중개사 잠금 오인) 차단 (B2 게이트)
     enabled: !!complexNo && /^\d+$/.test(complexNo) && tokenReady,
-    placeholderData: keepPreviousData,
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[3] === groupDuplicates ? keepPreviousData(previous) : undefined,
     staleTime: 30_000,
   });
 
@@ -194,7 +196,7 @@ export default function ComplexDetailPage() {
       const targets = visibleArticles ?? articles;
       setSelectedArticleNos(prev => {
         const next = new Set(prev);
-        targets.forEach(a => next.add(a.article_no));
+        targets.forEach(a => (a.group_members ?? [a]).forEach(member => next.add(member.article_no)));
         return next;
       });
     } else {
@@ -299,7 +301,13 @@ export default function ComplexDetailPage() {
         {/* 매물 수 + 데이터 갱신 + 엑셀 */}
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2 md:gap-3">
-            <span className="text-base md:text-lg font-semibold">매물 {totalCount}건</span>
+            <span className="text-base md:text-lg font-semibold">
+              {articlesQuery.isSuccess
+                ? groupDuplicates
+                  ? `추정 묶음 ${totalCount}개 · 원본 등록 ${articlesQuery.data?.raw_total ?? totalCount}건`
+                  : `원본 등록 ${totalCount}건`
+                : "매물 조회 중"}
+            </span>
             {tableLoading && (
               <div className="flex items-center gap-1.5" role="status" aria-label="매물 갱신 중">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
@@ -308,6 +316,13 @@ export default function ComplexDetailPage() {
             )}
           </div>
           <div className="flex items-center gap-1.5 md:gap-2 no-print">
+            <Button type="button" variant="outline" size="sm" onClick={() => {
+              setGroupDuplicates(v => !v);
+              setPage(1);
+              setSelectedArticleNos(new Set());
+            }}>
+              {groupDuplicates ? "원본 매물 보기" : "추정 묶음 보기"}
+            </Button>
             <Button
               type="button"
               variant="outline"
@@ -333,6 +348,8 @@ export default function ComplexDetailPage() {
             </Button>
           </div>
         </div>
+
+        {groupDuplicates && <p className="text-xs text-gray-500">네이버가 묶은 동일주소 매물 수(그룹 동기화분)와 동·층·면적·가격이 같은 등록의 보수 추정을 함께 반영한 묶음입니다. 동일 호실이 확정된 것은 아니며, 엑셀 내보내기는 원본 등록 기준입니다.</p>}
 
         <CrawlMessage
           crawling={crawling}

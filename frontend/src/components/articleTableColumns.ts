@@ -127,4 +127,6 @@ export const SERVER_SORT_MAP: Record<string, { asc: string; desc: string }> = {
   ppyeong: { asc: "ppyeong_asc", desc: "ppyeong_desc" },
   maint: { asc: "maintenance_asc", desc: "maintenance_desc" },
   confirm_date: { asc: "confirm_asc", desc: "confirm_desc" },
+  // 동별 정렬 — 서버가 같은 동끼리 모아 내려준다 (asc만 지원, 토글 시 내림은 rank 복귀 없이 asc 고정)
+  building: { asc: "building_asc", desc: "building_asc" },
 };

@@ -14,6 +14,8 @@ const buildId =
 const nextConfig: NextConfig = {
   // .mdx 파일을 페이지/라우트로 인식. Turbopack·webpack 양쪽 호환 위해 문자열 플러그인.
   pageExtensions: ["ts", "tsx", "md", "mdx"],
+  // 개발 서버를 Tailscale IP로 원격 접속할 때 dev 리소스(HMR 폰트 등) 차단 방지
+  allowedDevOrigins: ["100.93.169.113"],
   env: {
     NEXT_PUBLIC_BUILD_ID: buildId,
   },
@@ -62,7 +64,7 @@ const nextConfig: NextConfig = {
               "img-src 'self' data: blob: https://*.naver.net https://*.pstatic.net https://vercel.live https://vercel.com https://*.portone.io https://*.iamport.co https://*.firstpay.co.kr",
               // 네이버 지도 타일 데이터(*.pstatic.net) + 텔레메트리 로그(*.navercorp.com) connect 허용
               // PortOne 결제: SDK 가 결제 준비·상태조회로 *.portone.io + *.iamport.co(checkout-service) API 호출, 토스 결제수단은 *.tosspayments.com, KPN PG 는 *.firstpay.co.kr
-              "connect-src 'self' http://localhost:* https://*.supabase.co https://*.railway.app https://api.2u.pe.kr https://oapi.map.naver.com https://openapi.map.naver.com https://*.pstatic.net https://*.navercorp.com https://vercel.live wss://ws-us3.pusher.com https://*.portone.io https://*.iamport.co https://*.tosspayments.com https://*.firstpay.co.kr",
+              "connect-src 'self' http://localhost:* http://100.93.169.113:8002 https://*.supabase.co https://*.railway.app https://api.2u.pe.kr https://oapi.map.naver.com https://openapi.map.naver.com https://*.pstatic.net https://*.navercorp.com https://vercel.live wss://ws-us3.pusher.com https://*.portone.io https://*.iamport.co https://*.tosspayments.com https://*.firstpay.co.kr",
               // PortOne 결제창·PG사 결제 iframe: portone/iamport + KPN PG(*.firstpay.co.kr). 실 카드결제 시 카드사 도메인이 추가 차단되면 콘솔 로그로 추가 (세션 326 메모)
               "frame-src 'self' https://vercel.live https://*.portone.io https://*.iamport.co https://*.tosspayments.com https://*.firstpay.co.kr",
               "media-src 'self' data:",

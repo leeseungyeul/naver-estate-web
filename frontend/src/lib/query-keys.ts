@@ -19,8 +19,8 @@ export const queryKeys = {
 
   // Complex
   complex: (no: string) => ["complex", no] as const,
-  articles: (no: string, filters?: ArticleFilters) =>
-    ["articles", no, filters] as const,
+  articles: (no: string, filters?: ArticleFilters, grouped?: boolean) =>
+    ["articles", no, filters, grouped] as const,
   /** invalidation prefix — 해당 단지의 모든 articles 쿼리 무효화용 */
   articlesAll: (no: string) => ["articles", no] as const,
   pyeongDetails: (no: string) => ["pyeongDetails", no] as const,

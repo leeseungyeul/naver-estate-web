@@ -210,6 +210,16 @@ def crawl_complex_articles(complex_no: str, sido: str = None, sigungu: str = Non
         all_article_nos = set()
         total_articles = 0
 
+        # V060 — 기존 네이버 묶음 수 캐시: 개별 응답의 sameAddrCnt(항상 1)로
+        # 그룹 모드에서 저장한 실제 묶음 수가 덮여 쓰이는 것을 막는다.
+        naver_same_addr = {
+            row[0]: row[1]
+            for row in db.query(Article.article_no, Article.same_addr_cnt).filter(
+                Article.complex_no == complex_no, Article.is_active == True,
+                Article.same_addr_cnt > 1,
+            ).all()
+        }
+
         # 기존 가격 일괄 조회 (N+1 방지)
         existing_prices = {
             row[0]: (row[1], row[2])
@@ -265,6 +275,11 @@ def crawl_complex_articles(complex_no: str, sido: str = None, sigungu: str = Non
                 article.complex_no = complex_no
                 if not article.article_real_estate_type_name and complex_type_name:
                     article.article_real_estate_type_name = complex_type_name
+                # V060 — 직전 그룹 모드 수집의 네이버 묶음 수 보존: 개별 목록 응답의
+                # sameAddrCnt는 신뢰 불가(실측: 그룹 대표 26 vs 개별 1)라 덮어쓰기 전에
+                # 기존 DB값을 되살린다. update_same_addr_counts_from_naver 가 주기적 보정.
+                if naver_same_addr.get(article.article_no):
+                    article.same_addr_cnt = naver_same_addr[article.article_no]
                 upsert_article(db, article, track_price=True, existing_prices=existing_prices)
                 all_article_nos.add(article.article_no)
                 total_articles += 1
@@ -307,6 +322,17 @@ def crawl_complex_articles(complex_no: str, sido: str = None, sigungu: str = Non
         cpx = db.query(Complex).filter(Complex.complex_no == complex_no).first()
         if cpx and not cpx.detail_crawled_at:
             enrich_complex_detail(db, complex_no)
+
+        # V060 — 네이버 그룹 모드 동기화: sameAddressGroup=true 로 읽어 실제 묶음 수를
+        # 원본에 기록. 실패해도 개별 수집 성과를 막지 않는다(로그만 남김).
+        try:
+            from services.naver_group_sync import update_same_addr_counts_from_naver
+            sync_result = update_same_addr_counts_from_naver(db, complex_no)
+            logger.info("네이버 묶음 동기화: complex %s → %s", complex_no, sync_result)
+        except Exception as sync_err:
+            logger.warning("네이버 묶음 동기화 실패(개별 수집은 유지): complex %s → %s",
+                           complex_no, sync_err)
+            db.rollback()
 
         _finalize_job(
             db, job, "completed",

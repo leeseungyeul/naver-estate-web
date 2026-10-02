@@ -3,10 +3,12 @@
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from crawler.utils import haversine_km
 from db import queries
+from db.article_grouping import get_grouped_articles_by_complex
 from deps import get_approved_user, get_db
 from routers.serializers import (
     article_to_dict,
@@ -159,9 +161,10 @@ def get_complex_articles(
     min_yield: Optional[float] = Query(None, ge=0, le=100, description="최소 수익률 (%)"),
     max_yield: Optional[float] = Query(None, ge=0, le=100, description="최대 수익률 (%)"),
     # 정렬/페이지
-    sort_by: Literal["rank", "price_asc", "price_desc", "area_asc", "area_desc", "ppyeong_asc", "ppyeong_desc", "maintenance_asc", "maintenance_desc", "confirm_asc", "confirm_desc"] = Query("rank"),
+    sort_by: Literal["rank", "price_asc", "price_desc", "area_asc", "area_desc", "ppyeong_asc", "ppyeong_desc", "maintenance_asc", "maintenance_desc", "confirm_asc", "confirm_desc", "building_asc"] = Query("rank"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
+    group_duplicates: bool = Query(False),
     db: Session = Depends(get_db),
     user: dict = Depends(get_approved_user),  # B2 게이트: 승인 중개사 전용 (매물 목록)
 ):
@@ -179,6 +182,21 @@ def get_complex_articles(
         min_floor=min_floor, max_floor=max_floor, tags=tags,
         min_yield=min_yield, max_yield=max_yield,
     )
+
+    if group_duplicates:
+        groups, total, raw_total = get_grouped_articles_by_complex(
+            db, complex_no, filters=filters, sort_by=sort_by,
+            page=page, page_size=page_size,
+        )
+        return {
+            "articles": [
+                {**article_to_dict(rep), "group_count": len(members),
+                 "group_members": [article_to_dict(a) for a in members]}
+                for rep, members in groups
+            ],
+            "total": total, "raw_total": raw_total,
+            "page": page, "page_size": page_size,
+        }
 
     # 필터 없는 첫 페이지 기본 조회 → 캐시 (페이지 진입 속도 향상)
     is_default = (
@@ -307,7 +325,8 @@ def get_price_history(
         ],
     }
     _price_history_cache.set(cache_key, result)
-    return result
+    # 브라우저 HTTP 캐시가 오래된 빈 응답을 재사용하는 문제 방지 (실거래가 수집 직후 특히)
+    return JSONResponse(content=result, headers={"Cache-Control": "no-store"})
 
 
 # 공시가격 캐시 — 월 1회 갱신이라 오래 캐시 가능 (12시간 고정 TTL, price-history 답습)

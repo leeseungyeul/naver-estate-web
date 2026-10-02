@@ -237,7 +237,7 @@ async def security_headers_middleware(request: Request, call_next):
             response.headers["Cache-Control"] = "no-store"
         elif _COMPLEX_DETAIL_PATH.fullmatch(path) or (
             path.startswith("/api/complexes/") and "/articles" in path
-        ):
+        ) or "price-history" in path:
             # 단지 상세 1건 + 매물 목록은 no-cache (세션 396 §5-N).
             # 크롤 완료 직후 FE 가 재조회해도 브라우저 HTTP 캐시(3600s/30s)가 답해 배지·건수가
             # 옛값이었다(9/9 01:53 단지 15111 실측). 클라 캐시는 React Query staleTime 이 이미

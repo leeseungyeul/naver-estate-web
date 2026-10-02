@@ -66,19 +66,20 @@ function ArticleTable({
 
   const handleSortingChange = useCallback<OnChangeFn<SortingState>>(
     (updater) => {
-      setSorting((prev) => {
-        const next = typeof updater === "function" ? updater(prev) : updater;
-        const first = next[0];
-        if (first && onSortChange) {
-          const serverSort = SERVER_SORT_MAP[first.id];
-          if (serverSort) {
-            onSortChange(first.desc ? serverSort.desc : serverSort.asc);
-          }
+      // updater(=setState 함수) 내부에서 onSortChange(→ router.replace)를 호출하면
+      // 렌더 중 Router 갱신 경고("Cannot update a component...")가 발생한다.
+      // 부수효과는 updater 밖, 현재 state 기준으로 계산해 실행한다.
+      setSorting((prev) => (typeof updater === "function" ? updater(prev) : updater));
+      const next = typeof updater === "function" ? updater(sorting) : updater;
+      const first = next[0];
+      if (first && onSortChange) {
+        const serverSort = SERVER_SORT_MAP[first.id];
+        if (serverSort) {
+          onSortChange(first.desc ? serverSort.desc : serverSort.asc);
         }
-        return next;
-      });
+      }
     },
-    [onSortChange]
+    [onSortChange, sorting]
   );
 
   const table = useReactTable({
@@ -130,7 +131,8 @@ function ArticleTable({
                   type="checkbox"
                   checked={
                     sortedRows.length > 0 &&
-                    sortedRows.every((r) => selectedArticleNos?.has(r.original.article_no))
+                    sortedRows.every((r) => (r.original.group_members ?? [r.original])
+                      .every((a) => selectedArticleNos?.has(a.article_no)))
                   }
                   onChange={(e) =>
                     onSelectAll?.(e.target.checked, sortedRows.map((r) => r.original))
@@ -189,6 +191,7 @@ function ArticleTable({
             index={idx + 1}
             onClick={onRowClick}
             selected={selectedArticleNos?.has(row.original.article_no)}
+            selectedArticleNos={selectedArticleNos}
             onCheck={onSelectionChange}
           />
         ))}
@@ -202,14 +205,17 @@ const ArticleRow = memo(function ArticleRow({
   index,
   onClick,
   selected,
+  selectedArticleNos,
   onCheck,
 }: {
   article: Article;
   index: number;
   onClick?: (no: string) => void;
   selected?: boolean;
+  selectedArticleNos?: Set<string>;
   onCheck?: (articleNo: string, checked: boolean) => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const price =
     art.trade_type_name === "월세" || art.trade_type_name === "단기임대"
       ? `${art.deal_or_warrant_prc || "-"} / ${art.rent_prc || "-"}`
@@ -238,6 +244,7 @@ const ArticleRow = memo(function ArticleRow({
   if (confirm.length === 8) confirm = formatDateShort(confirm);
 
   return (
+    <>
     <TableRow
       onClick={() => onClick?.(art.article_no)}
       onKeyDown={(e) => {
@@ -296,7 +303,28 @@ const ArticleRow = memo(function ArticleRow({
             </span>
           )}
       </Td>
-      <Td>{art.building_name || "-"}</Td>
+      <Td>
+        {art.building_name || "-"}
+        {art.group_count != null && art.group_count > 1 && (
+          <button
+            type="button"
+            className="ml-1 rounded bg-blue-50 px-1 py-0.5 text-[10px] text-blue-700 hover:bg-blue-100"
+            aria-label={`추정 묶음 ${art.group_count}건 ${expanded ? "접기" : "펼치기"}`}
+            aria-expanded={expanded}
+            onClick={(e) => { e.stopPropagation(); setExpanded(v => !v); }}
+          >
+            추정 묶음 {art.group_count}건 {expanded ? "▲" : "▼"}
+          </button>
+        )}
+        {art.same_addr_cnt != null && art.same_addr_cnt > 1 && (
+          <span
+            className="ml-1 rounded bg-amber-50 px-1 py-0.5 text-[10px] text-amber-800"
+            title="네이버가 제공한 동일 주소 매물 수입니다. 동일 매물로 확정된 건수는 아니며 목록에서 자동 제외하지 않습니다."
+          >
+            동일주소 {art.same_addr_cnt}건
+          </span>
+        )}
+      </Td>
       <Td>{art.floor_info || "-"}</Td>
       <Td className="text-right font-semibold text-gray-900">
         {price}
@@ -354,6 +382,30 @@ const ArticleRow = memo(function ArticleRow({
       <Td>{art.realtor_name || "-"}</Td>
       <Td className="text-center">{confirm}</Td>
     </TableRow>
+    {expanded && art.group_members && art.group_members.length > 1 && (
+      <TableRow className="bg-blue-50/50">
+        <TableCell colSpan={COLUMNS.length + 1 + (onCheck ? 1 : 0)} className="p-3">
+          <div className="text-xs font-semibold text-gray-700 mb-2">추정 묶음의 원본 등록 {art.group_members.length}건 — 동일 호실 확정 아님</div>
+          <div className="flex flex-wrap gap-2">
+            {art.group_members.map(member => (
+              <div key={member.article_no} className="flex items-center gap-1 border rounded bg-white px-2 py-1">
+                {onCheck && (
+                  <input type="checkbox" aria-label={`묶음 원본 매물 ${member.article_no} 선택`}
+                    checked={!!selectedArticleNos?.has(member.article_no)}
+                    onChange={(e) => onCheck(member.article_no, e.target.checked)} />
+                )}
+                <button type="button" className="text-xs text-blue-700 hover:underline"
+                  onClick={() => onClick?.(member.article_no)}
+                  aria-label={`원본 매물 ${member.article_no} ${member.realtor_name || "중개사 미상"} 상세 보기`}>
+                  {member.realtor_name || "중개사 미상"} · {member.deal_or_warrant_prc || "가격 미상"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </TableCell>
+      </TableRow>
+    )}
+    </>
   );
 });
 

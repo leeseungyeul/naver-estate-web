@@ -57,6 +57,22 @@ describe("analytics 래퍼 — 실패 시 빈 데이터 삼킴 방지", () => {
     await expect(analytics.getPriceHistory("ERR")).rejects.toThrow();
   });
 
+  it("getPriceHistory: 수집 직후 기존 HTTP 캐시를 재사용하지 않는다", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    server.use(http.get(`${API}/api/complexes/OK/price-history`, () =>
+      HttpResponse.json({ complex_no: "OK", items: [{ base_month: "202609" }] }),
+    ));
+    try {
+      await expect(analytics.getPriceHistory("OK")).resolves.toMatchObject({ complex_no: "OK" });
+      expect(fetchSpy).toHaveBeenCalledWith(
+        `${API}/api/complexes/OK/price-history`,
+        expect.objectContaining({ cache: "no-store" }),
+      );
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
   it("getPyeongDetails: 500 이면 reject 한다 (빈 pyeong_details 반환 금지)", async () => {
     await expect(analytics.getPyeongDetails("ERR")).rejects.toThrow();
   });

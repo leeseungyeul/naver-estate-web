@@ -208,8 +208,13 @@ class NaverEstateAPI:
         return result
 
     @classmethod
-    def get_complex_articles(cls, complex_id, page=1):
-        """단지 ID로 매물 목록 조회 (JWT + Referer 필요)"""
+    def get_complex_articles(cls, complex_id, page=1, same_address_group=False):
+        """단지 ID로 매물 목록 조회 (JWT + Referer 필요)
+
+        same_address_group=True 면 네이버가 묶은 대표 매물만 내려온다
+        (sameAddrCnt = 묶인 등록 수). 실측(2026-10-02, 개봉아이파크 17538):
+        개별 false=143건 / 그룹 true=33그룹.
+        """
         # JWT 토큰 확보
         token = cls._ensure_jwt(complex_id)
         headers = {
@@ -218,6 +223,7 @@ class NaverEstateAPI:
         if token:
             headers['Authorization'] = f'Bearer {token}'
 
+        group_flag = 'true' if same_address_group else 'false'
         url = (
             f"{NAVER_COMPLEX_ARTICLES_API}/{complex_id}"
             f"?realEstateType=APT%3AABYG%3AJGC%3APRE%3AOPST%3AOBYG%3ARDV&tradeType="
@@ -227,7 +233,7 @@ class NaverEstateAPI:
             f"&areaMin=0&areaMax=900000000"
             f"&oldBuildYears&recentlyBuildYears"
             f"&minHouseHoldCount&maxHouseHoldCount"
-            f"&showArticle=false&sameAddressGroup=false"
+            f"&showArticle=false&sameAddressGroup={group_flag}"
             f"&minMaintenanceCost&maxMaintenanceCost"
             f"&priceType=RETAIL&directions="
             f"&page={page}&complexNo={complex_id}"

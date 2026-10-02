@@ -42,7 +42,7 @@ def get_articles_by_complex(
     stmt = (
         select(Article)
         .where(and_(*conditions))
-        .order_by(order_clause)
+        .order_by(*order_clause if isinstance(order_clause, tuple) else [order_clause])
         .offset((page - 1) * page_size)
         .limit(page_size)
     )

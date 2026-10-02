@@ -55,5 +55,5 @@ export async function getPriceHistory(complexNo: string, tradeType?: string, are
   if (tradeType) params.set("trade_type", tradeType);
   if (areaNo) params.set("area_no", areaNo);
   const qs = params.toString();
-  return fetchApi<PriceHistoryResponse>(`/api/complexes/${encodeURIComponent(complexNo)}/price-history${qs ? `?${qs}` : ""}`, authOpts(accessToken));
+  return fetchApi<PriceHistoryResponse>(`/api/complexes/${encodeURIComponent(complexNo)}/price-history${qs ? `?${qs}` : ""}`, { ...authOpts(accessToken), cache: "no-store" });
 }

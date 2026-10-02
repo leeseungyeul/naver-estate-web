@@ -99,6 +99,8 @@ export interface Article {
   price_change_state?: string;      // 가격변동 (SAME/INCREASE/DECREASE)
   article_status?: string;          // 거래상태 코드
   same_addr_cnt?: number;           // 동일주소 매물 묶음 수
+  group_count?: number;             // 조회 전용: 보수적 추정 묶음의 원본 행 수
+  group_members?: Article[];        // 조회 전용: 펼치기용 원본 매물
   same_addr_min_prc?: string;       // 동일주소 최저가
   same_addr_max_prc?: string;       // 동일주소 최고가
   verification_type_code?: string;  // 검증유형 코드
@@ -145,7 +147,7 @@ export interface PyeongDetail {
 }
 
 /** 정렬 옵션 (백엔드 Literal과 동기화) */
-export type SortBy = "rank" | "price_asc" | "price_desc" | "area_asc" | "area_desc" | "ppyeong_asc" | "ppyeong_desc" | "maintenance_asc" | "maintenance_desc" | "confirm_asc" | "confirm_desc";
+export type SortBy = "rank" | "price_asc" | "price_desc" | "area_asc" | "area_desc" | "ppyeong_asc" | "ppyeong_desc" | "maintenance_asc" | "maintenance_desc" | "confirm_asc" | "confirm_desc" | "building_asc";
 
 /** 필터 옵션 */
 export interface ArticleFilters {
@@ -184,4 +186,12 @@ export interface FilterOptions {
   building_names: string[];
   tags: string[];
   directions: string[];
+}
+
+export interface ArticlesResponse {
+  articles: Article[];
+  total: number;
+  raw_total?: number;
+  page: number;
+  page_size: number;
 }

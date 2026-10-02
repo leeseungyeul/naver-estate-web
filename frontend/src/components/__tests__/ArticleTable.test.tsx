@@ -57,6 +57,41 @@ describe("ArticleTable", () => {
     expect(screen.getByText("매매")).toBeInTheDocument();
   });
 
+  it("동일 주소 매물이 여럿이면 원본 집계 배지로 알리고 개별 행은 유지", () => {
+    render(<ArticleTable articles={[{ ...sampleArticle, same_addr_cnt: 3 }]} />);
+    const badge = screen.getByText("동일주소 3건");
+    expect(badge).toHaveAttribute("title", expect.stringContaining("동일 매물로 확정"));
+    expect(screen.getAllByRole("row", { name: /매물 A001 상세 보기/ })).toHaveLength(1);
+  });
+
+  it("추정 묶음을 펼치면 원본 중개사 매물을 보이고 각각 상세를 열 수 있다", () => {
+    const onRow = vi.fn();
+    const a1 = { ...sampleArticle, realtor_name: "가중개" };
+    const a2 = { ...sampleArticle, article_no: "A002", realtor_name: "나중개" };
+    render(<ArticleTable articles={[{ ...a1, group_count: 2, group_members: [a1, a2] }]} onRowClick={onRow} />);
+    fireEvent.click(screen.getByRole("button", { name: "추정 묶음 2건 펼치기" }));
+    expect(onRow).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: /원본 매물 A002/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /원본 매물 A002/ }));
+    expect(onRow).toHaveBeenCalledWith("A002");
+  });
+
+  it("펼친 원본 체크 상태는 대표 매물과 독립이다", () => {
+    const a1 = { ...sampleArticle, realtor_name: "가중개" };
+    const a2 = { ...sampleArticle, article_no: "A002", realtor_name: "나중개" };
+    const onCheck = vi.fn();
+    render(<ArticleTable articles={[{ ...a1, group_count: 2, group_members: [a1, a2] }]}
+      onSelectionChange={onCheck} selectedArticleNos={new Set(["A002"])} />);
+    fireEvent.click(screen.getByRole("button", { name: "추정 묶음 2건 펼치기" }));
+    expect(screen.getByRole("checkbox", { name: "묶음 원본 매물 A001 선택" })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "묶음 원본 매물 A002 선택" })).toBeChecked();
+  });
+
+  it("동일주소 집계가 없거나 1건이면 중복 배지를 표시하지 않는다", () => {
+    render(<ArticleTable articles={[sampleArticle, { ...sampleArticle, article_no: "A002", same_addr_cnt: 1 }]} />);
+    expect(screen.queryByText(/동일주소/)).not.toBeInTheDocument();
+  });
+
   it("빈 매물 목록 (EmptyState 카피)", () => {
     render(<ArticleTable articles={[]} />);
     expect(

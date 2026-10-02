@@ -17,7 +17,7 @@ from curl_cffi import requests as cffi_requests
 logger = logging.getLogger(__name__)
 
 # 공공데이터 API 기본 설정
-BASE_URL = "https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade"
+BASE_URL = "https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev"
 MAX_RETRIES = 3
 RETRY_DELAYS = [2, 5, 10]
 REQUEST_TIMEOUT = 15
