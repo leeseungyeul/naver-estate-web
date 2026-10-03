@@ -27,6 +27,30 @@ def add(db, no, ym, price, trade="A1", area2=84.0, floor=4):
     db.commit()
 
 
+def test_mixed_type_apt_dong_does_not_break_batch_insert(db):
+    """aptDong 혼합 타입(정수+문자) 배치 INSERT — PG 타입 추론 오류 방지.
+
+    국토부 API는 aptDong을 숫자는 int('108'), 문자는 str('C','아파트')로 섞어 준다.
+    insertmanyvalues가 첫 행 값으로 컬럼 타입을 추론해 첫 행이 정수면 이후
+    문자열 행에서 DataError 가 난다(2026-10-03 파크리오 소급 실측). 모든
+    apt_dong 이 문자열로 바인딩되어야 한다.
+    """
+    add(db, "t1", "202601", 50000)  # aptDong 없음
+    import crawler.service_public as sp
+
+    trades = [
+        {"aptNm": "가단지", "dealAmount": "50000", "dealDay": "1", "excluUseAr": "84.0", "floor": "4", "aptDong": 108},
+        {"aptNm": "나단지", "dealAmount": "60000", "dealDay": "2", "excluUseAr": "84.0", "floor": "5", "aptDong": "C"},
+        {"aptNm": "다단지", "dealAmount": "70000", "dealDay": "3", "excluUseAr": "84.0", "floor": "6"},
+    ]
+    sp.save_trade_raw_rows(db, trades, "202601", {"가단지": "C-TRADE", "나단지": "C-TRADE", "다단지": "C-TRADE"})
+    rows = db.query(ComplexTradeRaw).filter(ComplexTradeRaw.complex_no == "C-TRADE").all()
+    dongs = {r.price: r.apt_dong for r in rows}
+    assert dongs[50000] == "108"  # int → str 정규화
+    assert dongs[60000] == "C"    # str 유지
+    assert dongs[70000] is None   # 없음 → None
+
+
 def test_all_individual_trades_returned_not_averaged(db):
     add(db, "t1", "202601", 50000)
     add(db, "t2", "202601", 60000)

@@ -63,7 +63,11 @@ def save_trade_raw_rows(
         norm = _normalize_apt_name(apt_name)
         complex_no = name_map.get(norm)
         day = str(trade.get("dealDay") or "").zfill(2) or None
-        dong = trade.get("aptDong") or None
+        # aptDong 은 국토부가 정수(108)·문자('C','아파트')를 섞어 준다 — str 로 정규화
+        # 하지 않으면 insertmanyvalues 가 첫 행 값으로 컬럼 타입을 추론해 혼합 배치에서
+        # DataError 가 난다(2026-10-03 파크리오 소급 실측).
+        raw_dong = trade.get("aptDong")
+        dong = str(raw_dong).strip() or None if raw_dong is not None else None
         floor = safe_int(str(trade.get("floor") or "").strip())
         try:
             area = round(float(trade.get("excluUseAr") or 0), 2) or None
