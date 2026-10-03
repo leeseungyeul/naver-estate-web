@@ -78,10 +78,11 @@ FLAVOR_ODCLOUD = "odcloud"    # api.odcloud.kr — {"code": -N, "msg": ...} 계�
 #   odcloud 계열은 "flavor": FLAVOR_ODCLOUD 를 반드시 붙인다 — 빠뜨리면 판정기가
 #   어긋나 모든 응답이 degraded 로 뭉개져 그 API 만 감시 사각지대가 된다.
 PROBE_REGISTRY: list[dict] = [
-    # crawler/public_data_api.py BASE_URL
+    # crawler/public_data_api.py BASE_URL — 실제 호출 창구는 Dev(상세) 버전.
+    # 일반 버전(RTMSDataSvcAptTrade)을 감시하던 동안 실창구가 사각지대였던 결함 수정 (2026-10-02).
     {
         "name": "국토교통부 아파트 매매 실거래가",
-        "url": "https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade",
+        "url": "https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev",
     },
     # crawler/emergency_api.py EMERGENCY_LIST_URL
     {

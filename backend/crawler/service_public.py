@@ -16,12 +16,72 @@ from crawler.service_common import (
     fail_job_safely,
 )
 from db.database import SessionLocal
-from db.models import Complex, CrawlJob
+from db.models import Complex, ComplexTradeRaw, CrawlJob
 from utils import safe_int, utcnow
 
 logger = logging.getLogger(__name__)
 
 _N_DANJI_SUFFIX = re.compile(r"([0-9]+)단지$")
+
+
+def save_trade_raw_rows(
+    db,
+    trades: list[dict],
+    deal_ymd: str,
+    name_map: dict[str, str],
+    source: str = "public_api",
+) -> int:
+    """국토교통부 개별 거래 list → complex_trade_raw 저장 (거래 1건 = 행 1건).
+
+    월별 min/max/avg 집계(complex_price_history)와 별개로 원본 가격을 보존해
+    개별 점 차트를 그린다. 같은 (complex_no, 월, 일, 가격, 면적) 중복 재수집은
+    시그니처로 걸러 재삽입하지 않는다. 단지 매칭 실패분도 complex_no=NULL 로 남긴다.
+    Returns: 새로 삽입한 행 수.
+    """
+    if not trades:
+        return 0
+    from crawler.public_data_api import _normalize_apt_name  # lazy — import chain 실패 방지
+
+    ym = f"{deal_ymd[:4]}{deal_ymd[4:6]}"  # YYYYMM (deal_ymd = YYYYMM 또는 YYYYMMDD)
+    existing = {
+        (r[0], r[1], r[2] or "", r[3], r[4])
+        for r in db.query(
+            ComplexTradeRaw.deal_day, ComplexTradeRaw.price,
+            ComplexTradeRaw.apt_dong, ComplexTradeRaw.area2_m2,
+            ComplexTradeRaw.floor_number,
+        )
+        .filter(ComplexTradeRaw.deal_year_month == ym)
+        .all()
+    }
+    added = 0
+    for trade in trades:
+        apt_name = trade.get("aptNm") or trade.get("아파트") or ""
+        price_str = str(trade.get("dealAmount") or trade.get("거래금액") or "0")
+        price = safe_int(price_str.replace(",", "").strip())
+        if not apt_name or not price:
+            continue
+        norm = _normalize_apt_name(apt_name)
+        complex_no = name_map.get(norm)
+        day = str(trade.get("dealDay") or "").zfill(2) or None
+        dong = trade.get("aptDong") or None
+        floor = safe_int(str(trade.get("floor") or "").strip())
+        try:
+            area = round(float(trade.get("excluUseAr") or 0), 2) or None
+        except (TypeError, ValueError):
+            area = None
+        sig = (day, price, dong or "", area, floor)
+        if sig in existing:
+            continue
+        existing.add(sig)
+        db.add(ComplexTradeRaw(
+            complex_no=complex_no, trade_type="A1", deal_year_month=ym,
+            deal_day=day, price=price, area2_m2=area,
+            floor_number=floor or None, apt_dong=dong, source=source,
+        ))
+        added += 1
+    if added:
+        db.commit()
+    return added
 
 
 def _strip_n_danji(norm_name: str) -> str:
@@ -344,6 +404,9 @@ def collect_public_trade_data(batch_size: int = 300, scheduler_job_id: str | Non
                         apt_groups[norm] = []
                     apt_groups[norm].append(price)
 
+                # 개별 거래 원본 보존 (개별 점 차트용 — 거래 1건 = 행 1건)
+                save_trade_raw_rows(db, trades, deal_ymd, name_map)
+
                 # 기존 단지에 매칭하여 upsert
                 for norm_name, prices in apt_groups.items():
                     complex_no = name_map.get(norm_name)
@@ -511,6 +574,12 @@ def backfill_price_history(complex_no: str, months_back: int = 60) -> dict:
                 break
             if not trades:
                 continue
+
+            # 개별 거래 원본 보존 — 흡수 매칭(absorb_n_danji)도 동일 규칙으로 매핑
+            raw_name_map = {norm_name: complex_no}
+            if absorb_n_danji and norm_short != norm_name:
+                raw_name_map[norm_short] = complex_no
+            save_trade_raw_rows(db, trades, deal_ymd, raw_name_map)
 
             # 이 단지와 매칭되는 거래만 추출
             prices: list[int] = []

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { getPriceHistory } from "@/lib/api";
+import { getPriceHistory, getTradePoints } from "@/lib/api";
 import { usePriceCollect } from "@/hooks/usePriceCollect";
 import { Button } from "@/components/ui/button";
 import Skeleton from "@/components/Skeleton";
@@ -29,6 +29,15 @@ export default function PriceChartSection({ complexNo, pyeongDetails, accessToke
     queryKey: queryKeys.priceHistory(complexNo, undefined, historyAreaNo || undefined),
     queryFn: () => getPriceHistory(complexNo, undefined, historyAreaNo || undefined, accessToken),
     enabled: !!complexNo,
+  });
+
+  // 개별 실거래 점 — 실패해도 평균 차트는 유지되어야 하므로 조용히 생략 (retry 없음)
+  const tradePointsQuery = useQuery({
+    queryKey: queryKeys.tradePoints(complexNo),
+    queryFn: () => getTradePoints(complexNo, undefined, undefined, accessToken),
+    enabled: !!complexNo,
+    retry: false,
+    staleTime: 10 * 60 * 1000,
   });
 
   useEffect(() => clearPolling, [clearPolling]);
@@ -113,7 +122,7 @@ export default function PriceChartSection({ complexNo, pyeongDetails, accessToke
           </div>
         )
       ) : (
-        <LazyPriceHistory items={historyItems} />
+        <LazyPriceHistory items={historyItems} tradePoints={tradePointsQuery.data?.points} />
       )}
     </div>
   );

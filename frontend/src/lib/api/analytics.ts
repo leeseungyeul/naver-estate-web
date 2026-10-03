@@ -2,7 +2,7 @@
  * 통계/분석 API (DB 통계, 지역, 면적, 가격)
  */
 
-import type { DbStats, Regions, PyeongDetail, PriceStats, PriceHistoryResponse } from "@/types";
+import type { DbStats, Regions, PyeongDetail, PriceStats, PriceHistoryResponse, TradePointsResponse } from "@/types";
 import * as direct from "@/lib/api-direct";
 import { fetchApi, isBackendAvailable } from "./core";
 
@@ -56,4 +56,14 @@ export async function getPriceHistory(complexNo: string, tradeType?: string, are
   if (areaNo) params.set("area_no", areaNo);
   const qs = params.toString();
   return fetchApi<PriceHistoryResponse>(`/api/complexes/${encodeURIComponent(complexNo)}/price-history${qs ? `?${qs}` : ""}`, { ...authOpts(accessToken), cache: "no-store" });
+}
+
+/** 단지 개별 실거래 점 (거래 1건 = 점 1건) — B2 게이트 */
+export async function getTradePoints(complexNo: string, tradeType?: string, area2M2?: number, accessToken?: string) {
+  if (!isBackendAvailable()) throw new Error(BACKEND_DOWN_MSG);
+  const params = new URLSearchParams();
+  if (tradeType) params.set("trade_type", tradeType);
+  if (area2M2 != null) params.set("area2_m2", String(area2M2));
+  const qs = params.toString();
+  return fetchApi<TradePointsResponse>(`/api/complexes/${encodeURIComponent(complexNo)}/trade-points${qs ? `?${qs}` : ""}`, { ...authOpts(accessToken), cache: "no-store" });
 }

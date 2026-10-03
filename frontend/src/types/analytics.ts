@@ -49,6 +49,21 @@ export interface PriceHistoryResponse {
   items: PriceHistoryItem[];
 }
 
+/** 단지 개별 실거래 점 (거래 1건 = 점 1건) */
+export interface TradePoint {
+  year_month: string;
+  deal_day: string | null;
+  price: number;
+  area2_m2: number | null;
+  floor_number: number | null;
+}
+
+/** 단지 개별 실거래 점 응답 */
+export interface TradePointsResponse {
+  complex_no: string;
+  points: TradePoint[];
+}
+
 /** 단지 공동주택 공시가격 평형별 항목 */
 export interface OfficialPriceItem {
   prvuse_ar: number;

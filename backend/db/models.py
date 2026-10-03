@@ -427,6 +427,31 @@ class NaverApiCallCount(Base):
     call_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
+class ComplexTradeRaw(Base):
+    """단지 실거래 개별 원본 (국토교통부 공공데이터) — 개별 점 차트용.
+
+    기존 complex_price_history 는 월별 min/max/avg 집계 행이라 원본 가격을
+    잃는다. 이 테이블은 거래 1건 = 행 1건으로 개별 거래를 보존한다.
+    complex_no 는 FK 없음 — 매칭 실패 원본도 버리지 않기 위함(공시가격 답습).
+    """
+
+    __tablename__ = "complex_trade_raw"
+    __table_args__ = (
+        Index("idx_ctr_complex_ym", "complex_no", "deal_year_month"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    complex_no: Mapped[str | None] = mapped_column(String(20))  # 매칭 실패 시 NULL 허용
+    trade_type: Mapped[str] = mapped_column(String(10), nullable=False)  # A1=매매
+    deal_year_month: Mapped[str] = mapped_column(String(6), nullable=False)  # YYYYMM
+    deal_day: Mapped[str | None] = mapped_column(String(2))
+    price: Mapped[int] = mapped_column(Integer, nullable=False)  # 만원
+    area2_m2: Mapped[float | None] = mapped_column(Float)  # 전용면적 ㎡
+    floor_number: Mapped[int | None] = mapped_column(Integer)
+    apt_dong: Mapped[str | None] = mapped_column(String(50))
+    source: Mapped[str] = mapped_column(String(20), nullable=False)
+
+
 class ComplexOfficialPrice(Base):
     """공동주택 공시가격 (국토교통부 getApartHousingPriceAttr) — V044.
 

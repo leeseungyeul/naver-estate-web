@@ -33,6 +33,9 @@ export const queryKeys = {
     ["priceHistory", no, tradeType, areaNo] as const,
   /** invalidation prefix — 해당 단지의 모든 priceHistory 쿼리 무효화용 */
   priceHistoryAll: (no: string) => ["priceHistory", no] as const,
+  /** 개별 실거래 점 (거래 1건 = 점 1건) */
+  tradePoints: (no: string, tradeType?: string, area2M2?: number) =>
+    ["tradePoints", no, tradeType, area2M2] as const,
 
   // Article detail
   articleLive: (articleNo: string) => ["articleLive", articleNo] as const,

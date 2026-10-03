@@ -329,6 +329,34 @@ def get_price_history(
     return JSONResponse(content=result, headers={"Cache-Control": "no-store"})
 
 
+@router.get("/{complex_no}/trade-points")
+def get_trade_points(
+    complex_no: str,
+    trade_type: Optional[Literal["A1", "B1", "B2", "B3"]] = Query(None),
+    area2_m2: Optional[float] = Query(None, gt=0),
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_approved_user),  # B2 게이트: price-history 답습
+):
+    """단지 개별 실거래 점 (거래 1건 = 점 1건) — 승인 중개사 전용"""
+    points = queries.get_complex_trade_points(db, complex_no, trade_type, area2_m2=area2_m2)
+    return JSONResponse(
+        content={
+            "complex_no": complex_no,
+            "points": [
+                {
+                    "year_month": p["year_month"],
+                    "deal_day": p["deal_day"],
+                    "price": p["price"],
+                    "area2_m2": p["area2_m2"],
+                    "floor_number": p["floor_number"],
+                }
+                for p in points
+            ],
+        },
+        headers={"Cache-Control": "no-store"},
+    )
+
+
 # 공시가격 캐시 — 월 1회 갱신이라 오래 캐시 가능 (12시간 고정 TTL, price-history 답습)
 _official_price_cache = TTLCache(ttl=43200, max_size=1000)
 

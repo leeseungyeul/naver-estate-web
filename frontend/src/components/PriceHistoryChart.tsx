@@ -3,9 +3,9 @@
 import { useMemo, useState } from "react";
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, ComposedChart, Line, Area,
+  ResponsiveContainer, ComposedChart, Line, Area, Scatter,
 } from "recharts";
-import type { PriceHistoryItem } from "@/types";
+import type { PriceHistoryItem, TradePoint } from "@/types";
 import { formatChartPrice, formatChartMonth, getCutoffMonth, CHART_PERIODS, type PeriodKey } from "@/lib/format";
 
 interface ChartRow {
@@ -15,6 +15,7 @@ interface ChartRow {
 
 interface Props {
   items: PriceHistoryItem[];
+  tradePoints?: TradePoint[];
 }
 
 function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ dataKey: string; value: number; color: string }>; label?: string }) {
@@ -55,7 +56,7 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
   );
 }
 
-export default function PriceHistoryChart({ items }: Props) {
+export default function PriceHistoryChart({ items, tradePoints }: Props) {
   const [period, setPeriod] = useState<PeriodKey>("ALL");
 
   const filteredItems = useMemo(() => {
@@ -64,6 +65,24 @@ export default function PriceHistoryChart({ items }: Props) {
     const cutoff = getCutoffMonth(sel.months);
     return items.filter((item) => item.base_month >= cutoff);
   }, [items, period]);
+
+  // 개별 점도 기간 필터를 함께 적용 (커트라인 = 표시 중 월 범위 기준)
+  const filteredPoints = useMemo(() => {
+    if (!tradePoints?.length) return [];
+    const sel = CHART_PERIODS.find((p) => p.key === period);
+    if (!sel?.months) return tradePoints;
+    const cutoff = getCutoffMonth(sel.months);
+    return tradePoints.filter((p) => p.year_month >= cutoff);
+  }, [tradePoints, period]);
+
+  // 개별 점을 월 행에 병합 — X축이 month(포맷된 라벨)라 점도 같은 라벨로 환산
+  const pointRows = useMemo(() => {
+    if (filteredPoints.length === 0) return [];
+    return filteredPoints.map((p) => ({
+      month: formatChartMonth(p.year_month),
+      개별실거래: p.price,
+    }));
+  }, [filteredPoints]);
 
   const { data, hasMaemae, hasJeonse } = useMemo(() => {
     if (!filteredItems || filteredItems.length === 0) return { data: [], hasMaemae: false, hasJeonse: false };
@@ -140,6 +159,17 @@ export default function PriceHistoryChart({ items }: Props) {
               <Line type="monotone" dataKey="전세_하한" stroke="#3b82f660" strokeWidth={1} strokeDasharray="3 3" dot={false} connectNulls legendType="none" />
               <Line type="monotone" dataKey="전세" name="전세 평균" stroke="#3b82f6" strokeWidth={2} dot={{ r: 5, fill: "#3b82f6" }} activeDot={{ r: 7, stroke: "#3b82f6", strokeWidth: 2, fill: "#fff" }} connectNulls />
             </>
+          )}
+          {pointRows.length > 0 && (
+            <Scatter
+              name="개별 실거래"
+              data={pointRows}
+              dataKey="개별실거래"
+              fill="#f97316"
+              fillOpacity={0.55}
+              shape="circle"
+              legendType="circle"
+            />
           )}
         </ComposedChart>
       </ResponsiveContainer>

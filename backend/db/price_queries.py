@@ -10,6 +10,7 @@ from db.models import (
     ArticlePriceHistory,
     ComplexOfficialPrice,
     ComplexPriceHistory,
+    ComplexTradeRaw,
     KaptComplexMap,
     KaptManagementCost,
 )
@@ -224,6 +225,32 @@ def get_complex_price_history(
         .where(and_(*conditions))
         .group_by(ComplexPriceHistory.trade_type, month_col)
         .order_by(month_col.asc())
+    )
+    return [dict(row._mapping) for row in db.execute(stmt).all()]
+
+
+def get_complex_trade_points(
+    db: Session, complex_no: str,
+    trade_type: Optional[str] = None,
+    area2_m2: Optional[float] = None,
+) -> list[dict]:
+    """단지의 개별 실거래 점 (월별 평균 1점이 아니라 거래 1건 = 점 1건)"""
+    conditions = [ComplexTradeRaw.complex_no == complex_no]
+    if trade_type:
+        conditions.append(ComplexTradeRaw.trade_type == trade_type)
+    if area2_m2 is not None:
+        conditions.append(ComplexTradeRaw.area2_m2 == area2_m2)
+
+    stmt = (
+        select(
+            ComplexTradeRaw.deal_year_month.label("year_month"),
+            ComplexTradeRaw.deal_day,
+            ComplexTradeRaw.price,
+            ComplexTradeRaw.area2_m2,
+            ComplexTradeRaw.floor_number,
+        )
+        .where(and_(*conditions))
+        .order_by(ComplexTradeRaw.deal_year_month.asc(), ComplexTradeRaw.deal_day.asc())
     )
     return [dict(row._mapping) for row in db.execute(stmt).all()]
 

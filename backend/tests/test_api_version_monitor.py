@@ -359,7 +359,7 @@ def test_registry_covers_known_datagokr_endpoints():
     """
     urls = {entry["url"] for entry in PROBE_REGISTRY}
     expected = {
-        "https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade",
+        "https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev",
         "https://apis.data.go.kr/B552657/ErmctInfoInqireService/getEgytListInfoInqire",
         "https://apis.data.go.kr/B552584/MsrstnInfoInqireSvc/getNearbyMsrstnList",
         "https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty",

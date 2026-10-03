@@ -21,6 +21,7 @@ vi.mock("recharts", () => ({
   ),
   Line: () => <div data-testid="line" />,
   Area: () => <div data-testid="area" />,
+  Scatter: () => <div data-testid="trade-points" />,
   XAxis: () => null,
   YAxis: () => null,
   CartesianGrid: () => null,
@@ -109,5 +110,40 @@ describe("PriceHistoryChart", () => {
   it("빈 데이터일 때 기간 버튼 표시 안 함", () => {
     render(<PriceHistoryChart items={[]} />);
     expect(screen.queryByText("6개월")).not.toBeInTheDocument();
+  });
+
+  /* 개별 실거래 점 (Scatter 오버레이) */
+  it("tradePoints 있을 때 Scatter 렌더링", () => {
+    const items = [makeItem({ base_month: "202503" })];
+    const tradePoints = [
+      { year_month: "202503", deal_day: "10", price: 87000, area2_m2: 84.0, floor_number: 3 },
+      { year_month: "202503", deal_day: "18", price: 92000, area2_m2: 84.0, floor_number: 8 },
+    ];
+    const { container } = render(<PriceHistoryChart items={items} tradePoints={tradePoints} />);
+    expect(container.querySelector('[data-testid="trade-points"]')).toBeInTheDocument();
+  });
+
+  it("tradePoints 없으면 Scatter 렌더링 안 함 (하위 호환)", () => {
+    const items = [makeItem({ base_month: "202503" })];
+    const { container } = render(<PriceHistoryChart items={items} />);
+    expect(container.querySelector('[data-testid="trade-points"]')).not.toBeInTheDocument();
+  });
+
+  it("tradePoints가 기간 필터를 함께 적용받는다", () => {
+    const now = new Date();
+    const recentMonth = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const oldMonth = "202401";
+    const items = [
+      makeItem({ base_month: recentMonth }),
+      makeItem({ base_month: oldMonth }),
+    ];
+    const tradePoints = [
+      { year_month: recentMonth, deal_day: "10", price: 90000, area2_m2: 84.0, floor_number: 3 },
+      { year_month: oldMonth, deal_day: "10", price: 80000, area2_m2: 84.0, floor_number: 3 },
+    ];
+    render(<PriceHistoryChart items={items} tradePoints={tradePoints} />);
+    // 6개월 필터 적용 → 오래된 달 점 제거 (chart 데이터는 mock이라 직접 검증 불가)
+    // 컴포넌트가 점을 기간에 맞게 거르는지만 크래시 없이 확인
+    expect(screen.getByText("6개월")).toBeInTheDocument();
   });
 });

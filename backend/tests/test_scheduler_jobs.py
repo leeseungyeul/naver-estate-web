@@ -415,7 +415,7 @@ def test_source_text_resolves_probe_reference():
 
     name, url = _source_text({"probe": "국토교통부 아파트 매매 실거래가"})
     assert name == "국토교통부 아파트 매매 실거래가"
-    assert url == "https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade"
+    assert url == "https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev"
 
 
 def test_source_text_handles_string_and_none():
