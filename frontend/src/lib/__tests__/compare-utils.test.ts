@@ -105,7 +105,12 @@ describe("getAdvantageForRow", () => {
   });
 
   it("ADVANTAGE_ROWS 개수 확인", () => {
-    expect(ADVANTAGE_ROWS.length).toBe(14);
+    expect(ADVANTAGE_ROWS.length).toBe(13);
+  });
+
+  it("'최근 6개월 거래' 우위 행 없음 — recent_trades_6m 은 거래 횟수가 아니라 시세 기록 줄 수 (세션 429)", () => {
+    expect(ADVANTAGE_ROWS.map((r) => r.label)).not.toContain("최근 6개월 거래");
+    expect(ADVANTAGE_ROWS.map((r) => r.label)).toContain("매물수");
   });
 });
 

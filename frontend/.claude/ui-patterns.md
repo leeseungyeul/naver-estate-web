@@ -31,7 +31,7 @@
 - 단지 상세 헤더(ComplexHeader)에 "+ 비교" pill 토글 — 진입점 2곳 (세션 296). /complex 플로팅 바는 printRef 내부라 no-print 래퍼 + 모달보다 DOM 앞 필수
 - 하단 플로팅 바에 선택 단지 표시 + "비교하기" 버튼
 - /compare 페이지: useQueries로 병렬 조회, 24행 비교 테이블 (평당가 포함) + 우위 판정(★)
-- 차트 5종: CompareRadarChart(9축, 평당가 invert), ComparePriceTrendChart, ComparePriceBarChart(매매/전세/월세 ★), CompareFloorChart
+- 차트 5종: CompareRadarChart(8축, 평당가 invert), ComparePriceTrendChart, ComparePriceBarChart(매매/전세/월세 ★), CompareFloorChart
 - 상세 테이블 3종: 면적별 가격, 관리비, 세대구성
 - 인쇄: @media print .no-print + expandAll(아코디언 전체 펼침) + rAF 2회
 - 엑셀: xlsx dynamic import + safeCellValue 수식 인젝션 방어 (compare-export.ts)

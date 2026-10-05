@@ -95,7 +95,7 @@ export const COLLECTORS: readonly CollectorDef[] = [
     jobType: "complex_metric",
     schedulerJobId: "collect_metrics",
     manualCounted: false,
-    description: "모아 둔 시세로 단지 200곳의 가치 점수를 다시 계산해요 (외부 호출 없음)",
+    description: "최근 6개월 매매가 있는 모든 단지의 가치 점수를 다시 계산해요 (외부 호출 없음)",
     long: false,
   },
   {

@@ -70,7 +70,6 @@ const BASE_ROWS: { label: string; render: (c: Complex) => ReactNode }[] = [
   { label: "매물수", render: (c) => formatCount(c.article_count) },
   { label: "주변 중위가", render: (c) => formatPrice(c.nearby_median_price) },
   { label: "전세가율", render: (c) => c.jeonse_rate ? `${c.jeonse_rate.toFixed(0)}%` : "-" },
-  { label: "최근 6개월 거래", render: (c) => formatCount(c.recent_trades_6m) },
   { label: "수영장", render: (c) => c.has_pool ? "있음" : "없음" },
   { label: "관리사무소", render: (c) => c.management_office_tel || "-" },
 ];
@@ -82,7 +81,7 @@ const ROW_CATEGORIES = {
     "최저층", "최고층", "준공일", "최소 면적", "최대 면적",
   ]),
   price: new Set([
-    "평당가", "매물수", "주변 중위가", "전세가율", "최근 6개월 거래",
+    "평당가", "매물수", "주변 중위가", "전세가율",
   ]),
   facility: new Set([
     "총 주차", "세대당 주차", "난방", "난방 연료", "시공사",

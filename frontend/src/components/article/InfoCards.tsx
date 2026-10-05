@@ -66,7 +66,6 @@ export default function InfoCards({ article: a, complex: c }: Props) {
         ["세대당주차", c.parking_count_by_household ? `${c.parking_count_by_household}대` : null],
         ["주변시세", c.nearby_median_price ? formatKoreanPrice(c.nearby_median_price) + "/평" : null],
         ["전세가율", c.jeonse_rate ? `${c.jeonse_rate}%` : null],
-        ["최근6개월거래", c.recent_trades_6m ? `${c.recent_trades_6m}건` : null],
         ["관리사무소", c.management_office_tel],
       ]
     : [];

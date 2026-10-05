@@ -6,12 +6,14 @@ uvicorn[standard]>=0.53.0,<1
 # sqlalchemy: 2.0.50 patch (2026-05-24) — ORM polymorphic·joinedload·JSONB 개선.
 # 우리 신식 Mapped[] + mapped_column() 패턴 호환. 2026-05-31 lock: 2.0.49 → 2.0.50.
 # (당시 기록 — 이후 dependabot 이 하한을 수시로 올림: 현행 >=2.0.52 세션 374. 아래 핀이 진실)
-# 2.1 은 별도 검토 뒤에 올린다 — 2026-09-25 #551 머지 직후 pip 미리보기가 2.1.0 으로 뛰려 했다(운영 PostgreSQL 은 CI(SQLite)와 다른 세상).
-sqlalchemy[asyncio]>=2.0.54,<2.1
+# 2.1 은 세션 431 검토 뒤 올렸다(#645) — 2.1 은 드라이버 없는 `postgresql://` 의 기본이 psycopg(3) 라
+# db/database.py `_with_explicit_driver` 가 psycopg2 를 명시한다. 운영 반영은 서비스 정지 → 전역 pip → 시작
+# (켜진 채 pip 하면 cyextension .pyd 잠김으로 반쯤 설치될 수 있다).
+sqlalchemy[asyncio]>=2.1.0,<2.2
 psycopg2-binary>=2.9.13,<3
 curl_cffi>=0.16.3,<1
 apscheduler>=3.11.3,<4
-filelock>=4.0.1,<5
+filelock>=4.0.3,<5
 pandas>=3.0.6,<4
 xlsxwriter>=3.2.9,<4
 python-dotenv>=1.2.3,<2
@@ -20,7 +22,7 @@ python-dotenv>=1.2.3,<2
 # 2026-06-16 하한 상향: PYSEC-2026-175~179 fix=2.13.0 (advisory OSV DB 전파 시 CI(--strict) 빨강 선제 차단).
 # 2026-09-09 [crypto] extra 추가: Supabase 서명키가 비대칭(EC P-256/ES256)으로 전환돼
 # deps.py 가 PyJWKClient + ES256 로컬 검증을 쓴다 -> cryptography 필수 (옛 "HS256 대칭키만, extra 불필요" 무효).
-PyJWT[crypto]>=2.14.0,<3
+PyJWT[crypto]>=2.15.0,<3
 # 2026-06-16 하한 상향: CVE-2026-53538~53540 fix=0.0.31 (폼 파싱 DoS). verify.py UploadFile 사용처 있어 선제 차단.
 python-multipart>=0.0.32,<1
 redis>=8.1.0,<9
@@ -33,4 +35,4 @@ portone-server-sdk>=0.21,<1
 # 2026-06-16(세션 310): 1.0.1 에 신규 CVE 4건 공개 (CVE-2026-48818/48817 fix 1.1.0,
 # CVE-2026-54283 fix 1.3.1, CVE-2026-54282 fix 1.3.0) → 1.3.1 로 bump. fastapi 0.136.3 은
 # starlette>=0.46.0 만 요구(상한 없음) → 1.3.1 호환 실측 확인(앱 import + rate_limiter 테스트 통과).
-starlette>=1.6.0,<1.7
+starlette>=1.7.0,<1.8

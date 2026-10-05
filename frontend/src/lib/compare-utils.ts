@@ -32,7 +32,6 @@ export const ADVANTAGE_ROWS: CompareRowMeta[] = [
   { label: "매물수", getValue: (c) => c.article_count ?? null, direction: "higher" },
   { label: "주변 중위가", getValue: (c) => c.nearby_median_price ?? null, direction: "higher" },
   { label: "전세가율", getValue: (c) => c.jeonse_rate ?? null, direction: "higher" },
-  { label: "최근 6개월 거래", getValue: (c) => c.recent_trades_6m ?? null, direction: "higher" },
 ];
 
 /**

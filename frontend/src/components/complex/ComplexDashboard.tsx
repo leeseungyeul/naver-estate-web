@@ -85,8 +85,9 @@ export default function ComplexDashboard({
     {
       key: "chart",
       label: "실거래가",
-      primary: complex.recent_trades_6m != null ? `${complex.recent_trades_6m}건` : `매물 ${count}건`,
-      secondary: complex.recent_trades_6m != null ? "최근 6개월" : "현재 매물",
+      // recent_trades_6m 은 실제 거래 횟수가 아니라 시세 기록 줄 수라 "거래 N건"으로 보여 주지 않는다(세션 429)
+      primary: `매물 ${count}건`,
+      secondary: "현재 매물",
     },
     {
       key: "info",

@@ -3,6 +3,7 @@ name: tax-law-verifier
 description: 계산기 코드(양도세·취득세·보유세·중개수수료) 변경 시 법령 정합성 cross-check + "테스트가 결함을 정답으로 박제" 패턴을 감지하는 read-only 리뷰어. Use proactively when frontend/src/lib/ 의 *tax*.ts·brokerage*.ts 가 변경될 때.
 tools: Glob, Grep, Read, WebFetch
 model: opus
+effort: medium
 ---
 
 # 세금 계산기 법령 검증 리뷰어

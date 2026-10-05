@@ -87,7 +87,10 @@ COMPLEX_DETAIL_BATCH_SIZE = int(os.getenv("COMPLEX_DETAIL_BATCH_SIZE", "1000"))
 COMPLEX_DETAIL_APT_INTERVAL_HOURS = int(os.getenv("COMPLEX_DETAIL_APT_INTERVAL_HOURS", "4"))
 COMPLEX_DETAIL_OPST_INTERVAL_HOURS = int(os.getenv("COMPLEX_DETAIL_OPST_INTERVAL_HOURS", "4"))
 COMPLEX_METRIC_ENABLED = os.getenv("COMPLEX_METRIC_ENABLED", "true").lower() == "true"
-COMPLEX_METRIC_BATCH_SIZE = int(os.getenv("COMPLEX_METRIC_BATCH_SIZE", "1000"))
+# 0 = 전량(최근 6개월 매매가 있는 모든 단지를 매일 다시 계산 — 세션 428). DB 집계만이라 외부 호출 0.
+# 옛 이름 COMPLEX_METRIC_BATCH_SIZE 는 "빈 단지 N곳 채우기" 뜻이라 새 이름으로 바꿨다 — 운영 .env 에 옛 줄이
+# 남아 있어도 전량이 덮이지 않게(그 파일은 우리가 못 읽는다). 옛 줄이 있으면 기동 때 안내 로그만 남긴다.
+COMPLEX_METRIC_RECOMPUTE_LIMIT = int(os.getenv("COMPLEX_METRIC_RECOMPUTE_LIMIT", "0"))
 # 빌링키 자동결제(정기결제 PR3) — 매일 04:50 next_charge_at 도래분 결제. 기본 활성.
 BILLING_AUTO_CHARGE_ENABLED = os.getenv("BILLING_AUTO_CHARGE_ENABLED", "true").lower() == "true"
 # 결제 기능 전역 스위치(세션 400 무료 전환, 기본 꺼짐) — 결제 API 게이트와 같은 값을 본다.
@@ -636,19 +639,26 @@ def create_scheduler() -> BackgroundScheduler:
     #    08:00 mibunyang 로컬 수집과도 더 멀어짐(기존 08:30=30분 분리 → 04:30=3.5h 분리).
     #    03:30 backfill·04:00 Wed 시세와 시작 instant 겹침 없음, 전부 max_instances=1·집계 전용.
     #    주1회→매일 전환: 집계 대상(시세 이력 보유 단지) 완주를 가속.
+    #    세션 428: 매일 전 단지 다시 계산(배치 0 = 전량). 최근 6개월 매매 없는 단지는 마지막 값 유지.
     if COMPLEX_METRIC_ENABLED:
         scheduler.add_job(
             collect_complex_metrics,
             "cron",
             hour=4,
             minute=30,
-            kwargs={"batch_size": COMPLEX_METRIC_BATCH_SIZE, "scheduler_job_id": "collect_metrics"},
+            kwargs={"batch_size": COMPLEX_METRIC_RECOMPUTE_LIMIT, "scheduler_job_id": "collect_metrics"},
             id="collect_metrics",
             name="단지 가치 점수 계산",
             max_instances=1,
             misfire_grace_time=3600,
         )
-        logger.info("단지 가치지표 수집 활성화: 매일 04:30 (배치 %d)", COMPLEX_METRIC_BATCH_SIZE)
+        logger.info(
+            "단지 가치지표 수집 활성화: 매일 04:30 (%s)",
+            "전량" if COMPLEX_METRIC_RECOMPUTE_LIMIT <= 0 else f"배치 {COMPLEX_METRIC_RECOMPUTE_LIMIT}",
+        )
+        if os.getenv("COMPLEX_METRIC_BATCH_SIZE") is not None:
+            # 값은 찍지 않는다 — 옛 줄이 남아 있다는 사실만(지울지는 사람 몫)
+            logger.info("옛 설정 COMPLEX_METRIC_BATCH_SIZE 는 더는 쓰지 않습니다(세션 428) — 지워도 됩니다")
 
     # M-2. 빌링키 자동결제 — 매일 새벽 4시 50분 (정기결제 PR3, 세션 330).
     #   next_charge_at 도래분(status='active' AND is_default) 카드를 PortOne 빌링키 결제.

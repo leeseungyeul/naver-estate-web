@@ -3,6 +3,7 @@ name: payment-safety-reviewer
 description: 결제·정기결제 코드(routers/payment.py·routers/billing.py·crawler/billing_charge.py) 변경 시 서버측 금액 재산정·웹훅 서명 검증·PortOne 대조·3일 연속 실패 중단 룰을 검증하는 read-only 리뷰어. Use proactively when 위 3개 파일이 변경될 때.
 tools: Glob, Grep, Read
 model: opus
+effort: high
 ---
 
 # 결제·정기결제 안전 리뷰어

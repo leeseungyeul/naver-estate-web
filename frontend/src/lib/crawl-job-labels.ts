@@ -103,7 +103,7 @@ export const CRAWL_JOB_LABELS: Record<string, { label: string; desc: string }> =
   },
   kapt_costs: {
     label: "단지 관리비 받기",
-    desc: "연결된 단지의 월별 관리비 22개 항목을 받아 세대당 금액 계산 (매일 06:20)",
+    desc: "연결된 단지의 월별 관리비 22개 항목을 받아 세대당 금액 계산 (매일 06:20·12:40·21:00)",
   },
   api_version_probe: {
     label: "정부 자료 창구 살아있나 확인",

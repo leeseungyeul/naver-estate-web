@@ -78,7 +78,6 @@ export function OverviewSection({ apartment: a }: SectionProps) {
         <InfoRow label="네이버 매물 수" value={a.naver_sell_count != null ? `${a.naver_sell_count}건` : undefined} />
         <InfoRow label="네이버 전세가율" value={a.naver_jeonse_rate != null ? `${a.naver_jeonse_rate.toFixed(1)}%` : undefined} />
         <InfoRow label="등록" value={a.created_at ? new Date(a.created_at).toLocaleDateString("ko-KR") : undefined} />
-        <InfoRow label="갱신" value={a.updated_at ? new Date(a.updated_at).toLocaleDateString("ko-KR") : undefined} />
       </dl>
     </SectionCard>
   );

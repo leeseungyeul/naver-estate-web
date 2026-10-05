@@ -144,6 +144,19 @@ describe("단지 비교 — 에러 분기", () => {
     expect(bcrIdx).toBeGreaterThanOrEqual(0);
     expect(labelCells[bcrIdx + 1]).toBe("평당가");
   });
+
+  it("비교 표에 '최근 6개월 거래' 줄이 없고 매물수 줄은 남는다 (세션 429 — 시세 기록 줄 수를 거래로 보이던 것)", async () => {
+    renderPage("ids=A,B");
+    await waitFor(() => {
+      expect(screen.getAllByText("68%").length).toBeGreaterThanOrEqual(1);
+    });
+    const labelCells = Array.from(
+      document.querySelectorAll("table tbody tr th:first-child, table tbody tr td:first-child"),
+    ).map((el) => el.textContent?.trim() ?? "");
+    expect(labelCells).toContain("매물수");
+    expect(labelCells).not.toContain("최근 6개월 거래");
+    expect(screen.queryByText("최근 6개월 거래")).toBeNull();
+  });
 });
 
 describe("모바일 비교 화면 tablist (Radix Tabs, PR 5b)", () => {

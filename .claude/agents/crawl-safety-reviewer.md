@@ -3,6 +3,7 @@ name: crawl-safety-reviewer
 description: 네이버 크롤링·crawler·routers/live 코드 변경 시 throttle 경유·IP차단 방지 룰을 검증하는 read-only 리뷰어. infra.md §IP차단 방지 절대규칙 자동 감시. Use proactively when crawler/ 또는 routers/live 코드가 변경될 때.
 tools: Glob, Grep, Read
 model: opus
+effort: medium
 ---
 
 # 네이버 크롤링 IP 차단 방지 리뷰어

@@ -124,7 +124,7 @@ git 추적 자산만 다른 컴퓨터/CI에서 사용 가능. 사적 파일은 �
 
 | 우선순위 | 부채 | 위치 | 영향 |
 |---|---|---|---|
-| 🟡 2순위 | 가치 3필드 채움률 진행 중 | `complex_metric` cron 매일 04:30 KST | PR #61 (배치 1000) 가동 확정 (세션 234 4중 cross-check 통과). ~25일 자동 완주 = 능동 작업 불필요. backend zombie 회피 룰 = `release.md` |
+| 🟡 2순위 | 가치 3필드 채움률 진행 중 | `complex_metric` cron 매일 04:30 KST | PR #61 (배치 1000) 가동 확정 (세션 234 4중 cross-check 통과). ~25일 자동 완주 = 능동 작업 불필요. 세션 428 부터 매일 전량 다시 계산(최근 6개월 매매 없는 단지는 마지막 값 유지, 배치 0 = 전량). backend zombie 회피 룰 = `release.md` |
 
 ### §6.1 해소 완료 아카이브 (이력 보존 — "왜 이렇게 됐나" 추적용)
 
@@ -176,13 +176,13 @@ git 추적 자산만 다른 컴퓨터/CI에서 사용 가능. 사적 파일은 �
 |---|---|---|---|
 | **Plan→Guard→Work→Review 워크플로우** | `rules/planning.md` 자동 트리거 + `superpowers:writing-plans` 스킬 + 서브에이전트 3개 병렬 (Explore + code-reviewer + silent-failure-hunter) | `.claude/rules/planning.md` (자동 로드) | 새 기능·5+ 파일 수정 / 사용자 "plan 짜" 또는 plan mode 진입 |
 | **9 GATE 검증** | 글로벌 `rules/self-check.md` §자가 점검 1+2 (서브에이전트 3개 병렬, 부재 단정 차단, 맹점·할루시네이션 발굴) | `~/.claude/rules/self-check.md` (글로벌 자동 로드) | 코드 작성 직후·ExitPlanMode 거부 시·사용자 "맹점 찾아라" 명시 |
-| **커밋 작성** | `/commit-commands:commit` | 글로벌 플러그인 | 변경 완료 후 사용자 "커밋해" |
-| **커밋+푸시+PR** | `/commit-commands:commit-push-pr` | 글로벌 플러그인 | PR 만들 때 |
-| **gone 브랜치 정리** | `/commit-commands:clean_gone` | 글로벌 플러그인 | 원격 삭제된 로컬 브랜치 정리 |
-| **PR 코드 리뷰** | `/code-review:code-review` | 글로벌 플러그인 | PR 받은 직후 |
+| **커밋 작성** | 직접 `git commit -F <메시지 파일>` (전역 multi-repo §4: fetch→보고→허락) | — (commit-commands 플러그인은 2026-10-05 전역에서 꺼짐) | 변경 완료 후 사용자 "커밋해" |
+| **커밋+푸시+PR** | 직접 `git commit -F` → `git push` → `gh pr create --body-file` | — (플러그인 꺼짐) | PR 만들 때 |
+| **gone 브랜치 정리** | 직접 `git fetch --prune` → `git branch -vv` 의 `: gone]` 가지를 이름 목록으로 확인 뒤 삭제 | — (플러그인 꺼짐) | 원격 삭제된 로컬 브랜치 정리 |
+| **PR 코드 리뷰** | 내장 `/code-review` 스킬 또는 이 레포 리뷰 에이전트(crawl·migration·payment·tax) | Claude Code 내장 (code-review 플러그인은 꺼짐) | PR 받은 직후 |
 | **PR 종합 리뷰** | `/pr-review-toolkit:review-pr` | 글로벌 플러그인 | 큰 PR 다각도 리뷰 (test·comment·silent-failure·type-design) |
-| **CLAUDE.md 갱신** | `/claude-md-management:revise-claude-md` | 글로벌 플러그인 | 세션 종료 시 진행상황 박제 |
-| **CLAUDE.md 감사** | `/claude-md-management:claude-md-improver` | 글로벌 플러그인 | CLAUDE.md 품질 점검 요청 시 |
+| **CLAUDE.md 갱신** | 직접 Edit (진행 박제는 메모리 — planning.md) | — (claude-md-management 플러그인 꺼짐) | 갱신 트리거 해당 시 |
+| **CLAUDE.md 감사** | 전역 `doc-diet` 스킬 + 직접 편집 | 글로벌 스킬 (플러그인 꺼짐) | CLAUDE.md 품질·크기 점검 요청 시 |
 | **hookify 룰 작성** | `/hookify:hookify` 또는 `/hookify:list` | 글로벌 플러그인 | 자동 차단 룰 만들 때 (예: "from now on..." 요청) |
 | **코드 단순화** | `/code-simplifier:code-simplifier` 또는 Agent | 글로벌 플러그인 | 코딩 완료 후 가독성 개선 |
 | **로컬 웹앱 테스트** | `webapp-testing` skill | 글로벌 `~/.claude/skills/` | dev 서버 띄운 후 UI 검증 |
@@ -212,8 +212,8 @@ git 추적 자산만 다른 컴퓨터/CI에서 사용 가능. 사적 파일은 �
 
 | 도구 | 출처 | 활용 |
 |---|---|---|
-| `typescript-lsp` | 글로벌 플러그인 | TS 에디터 진단 (정의로 이동·호버·진단 메시지) |
-| `pyright-lsp` | 글로벌 플러그인 | Python 정적 검사 |
+| VS Code IDE 진단 (`<new-diagnostics>`) + `npx tsc --noEmit` | 편집기 내장 (typescript-lsp 플러그인은 2026-10-05 전역에서 꺼짐 — 꼭 필요하면 이 레포 settings 에서만 켜기) | TS 진단 |
+| `ruff check .` + IDE 진단 | 프로젝트 CLI (pyright-lsp 플러그인 꺼짐) | Python 정적 검사 |
 
 ### §8.5 프로젝트 CLI / npm scripts
 
@@ -258,9 +258,9 @@ git 추적 자산만 다른 컴퓨터/CI에서 사용 가능. 사적 파일은 �
 | **버그 수정** | `superpowers:systematic-debugging` | TDD skill |
 | **타입·라이브러리 문서 필요** | `mcp__context7__query-docs` | WebFetch |
 | **UI 시각 검증** | `webapp-testing` skill (Playwright Python) | `playwright` MCP |
-| **PR 리뷰** | `/pr-review-toolkit:review-pr` | `/code-review:code-review` |
-| **커밋·푸시·PR** | `/commit-commands:commit-push-pr` | 직접 `git commit` |
-| **CLAUDE.md 갱신** | `/claude-md-management:revise-claude-md` | 직접 Edit |
+| **PR 리뷰** | `/pr-review-toolkit:review-pr` | 내장 `/code-review` |
+| **커밋·푸시·PR** | 직접 `git commit -F` + `gh pr create --body-file` | (없음) |
+| **CLAUDE.md 갱신** | 직접 Edit | 전역 `doc-diet` 스킬 |
 | **CI 결과 확인** | `gh run list` + `gh run view` | (없음) |
 | **자동 차단 룰** | `/hookify:hookify` | (없음) |
 | **9 GATE 검증** | 글로벌 `rules/self-check.md` 자가 점검 1+2 (서브에이전트 3개 병렬) | `superpowers:verification-before-completion` |
@@ -280,6 +280,6 @@ git 추적 자산만 다른 컴퓨터/CI에서 사용 가능. 사적 파일은 �
 5. "worktrees 잔재 정리 명령?" → `grep "worktree prune" .claude/ASSETS.md` → §6
 6. "라이브러리 문서 어떻게 찾지?" → `grep context7 .claude/ASSETS.md` → §8.1
 7. "버그 디버깅 도구?" → `grep debugging .claude/ASSETS.md` → §8.3 systematic-debugging
-8. "커밋 자동화 도구?" → `grep commit-commands .claude/ASSETS.md` → §8.2
+8. "커밋은 어떻게?" → `grep "커밋 작성" .claude/ASSETS.md` → §8.2 (직접 `git commit -F`)
 9. "CI 결과 확인 명령?" → `grep "gh run" .claude/ASSETS.md` → §8.7
 10. "백엔드 수동 실행 명령?" → `grep "uvicorn" .claude/ASSETS.md` → §8.5

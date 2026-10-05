@@ -7,12 +7,7 @@
 
 ## 함정 — "자체 프로필이니까 안전" 은 절반만 맞다
 
-chrome-devtools MCP 는 기본값으로 자체 Chrome 인스턴스 + 전용 프로필을 띄우지만, 그
-프로필은 **영속(persistent)** 이다 — `%HOMEPATH%/.cache/chrome-devtools-mcp/chrome-profile*`
-에 저장되고 "run 간 삭제되지 않으며 모든 인스턴스가 공유"(공식 README, 2026-08-09 확인).
-즉 **과거 어느 세션에서든 한 번 로그인했으면 지금도 로그인 상태**다. `--browserUrl` /
-`--wsEndpoint` 로 사용자가 쓰는 실제 크롬에 붙는 모드면 실프로필 그 자체를 공유한다.
-일회용이 필요하면 `--isolated`(종료 시 자동 삭제 임시 프로필).
+(상세: .claude/rules-detail/browser-automation-isolation.md §chrome-devtools MCP 영속 프로필)
 
 ## 시작 전 체크 (예외 0)
 
@@ -59,15 +54,6 @@ chrome-devtools MCP 는 기본값으로 자체 Chrome 인스턴스 + 전용 프�
   읽어 몇 회를 썼는지 보고에 명시한다.
 - 캐시 TTL 안의 재조회·이미 진행 중인 크롤은 차감되지 않으므로(신규 크롤 시작 경로만 차감) 같은 단지 재확인은 쿼터를 안 먹는다.
 
-## 사건 (왜 이 룰?)
+(상세: .claude/rules-detail/browser-automation-isolation.md §사건 (왜 이 룰?))
 
-2026-08-07 세션 351 — 멀티탭 로그인 튕김 버그(auth-js#213)를 chrome-devtools MCP 로
-라이브 반복 재현하던 중, 자동화 브라우저가 사장님의 실제 로그인 세션 쿠키를 쥐고 있어
-**실 JWT 토큰 값이 조사 결과 텍스트에 그대로 노출**. 사장님이 "본인 계정이라 괜찮다"며
-진행을 승인했으나, 재발방지 P0 로 박제 → 세션 353 본 룰 신설.
-
-## Cross-link
-
-- `.claude/skills/live-verify/SKILL.md` — 라이브 실측 진입점 (본 체크가 선행 조건)
-- `~/.claude/rules/prod-key-injection-and-test-phone.md` — "실부수효과·실값 노출 방지" 자매 룰 (글로벌)
-- `.claude/rules/testing.md` — E2E 계정 운용
+(상세: .claude/rules-detail/browser-automation-isolation.md §Cross-link)

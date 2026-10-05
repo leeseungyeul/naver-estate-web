@@ -117,20 +117,66 @@ def test_crawl_details_uses_batch_size_env():
 
 
 def test_complex_metric_uses_batch_size_env():
-    """collect_metrics job kwargs 의 batch_size 가 COMPLEX_METRIC_BATCH_SIZE 를 따른다.
+    """collect_metrics job kwargs 의 batch_size 가 COMPLEX_METRIC_RECOMPUTE_LIMIT 를 따른다(세션 428 이름 변경).
 
-    가치지표 가속 PR — 기본값 200 → 1000 으로 격상 (env 미설정 시 1000).
-    가치 3필드 25,262 단지 잔여 / 200/day = 126일 → 1000/day = 25일.
+    세션 428 부터 기본값 0 = 전량(매일 전 단지 다시 계산). 양수면 세대수 상위 그만큼만.
     회귀 방지 — kwargs 가 module-level 상수를 참조하는지 검증.
     """
     with patch.multiple(
         sched_mod,
         COMPLEX_METRIC_ENABLED=True,
-        COMPLEX_METRIC_BATCH_SIZE=555,
+        COMPLEX_METRIC_RECOMPUTE_LIMIT=555,
     ):
         scheduler = sched_mod.create_scheduler()
     job = {j.id: j for j in scheduler.get_jobs()}["collect_metrics"]
     assert job.kwargs["batch_size"] == 555
+
+
+def test_complex_metric_startup_log_says_all_when_zero(caplog):
+    """세션 428: 배치 0 = 전량 — 재시작 뒤 기동 로그 한 줄로 전량/배치를 구분할 수 있어야 한다."""
+    import logging
+
+    for size, expected in ((0, "(전량)"), (555, "(배치 555)")):
+        caplog.clear()
+        with caplog.at_level(logging.INFO, logger="crawler.scheduler"), patch.multiple(
+            sched_mod, COMPLEX_METRIC_ENABLED=True, COMPLEX_METRIC_RECOMPUTE_LIMIT=size
+        ):
+            sched_mod.create_scheduler()
+        lines = [r.getMessage() for r in caplog.records if "단지 가치지표 수집 활성화" in r.getMessage()]
+        assert lines and expected in lines[0]
+
+
+def test_complex_metric_ignores_old_batch_env(monkeypatch, caplog):
+    """세션 428: 옛 이름 COMPLEX_METRIC_BATCH_SIZE 가 운영 .env 에 남아 있어도 전량이 덮이지 않는다.
+
+    새 상수는 새 이름만 읽고, 옛 줄이 있으면 기동 로그에 "더는 쓰지 않습니다" 안내만 남긴다(값은 안 찍음).
+    """
+    import importlib
+    import logging
+
+    import dotenv
+
+    monkeypatch.setenv("COMPLEX_METRIC_BATCH_SIZE", "1000")
+    monkeypatch.delenv("COMPLEX_METRIC_RECOMPUTE_LIMIT", raising=False)
+    # reload 때 모듈 맨 위 load_dotenv() 가 그 PC 의 backend/.env 를 다시 읽으면(운영 폴더에서 시험할 때)
+    # 결과가 .env 내용에 따라 달라진다 — 이 시험 동안만 막는다(세션 428 재검사관).
+    monkeypatch.setattr(dotenv, "load_dotenv", lambda *a, **k: False)
+    fresh = importlib.reload(sched_mod)
+    try:
+        assert fresh.COMPLEX_METRIC_RECOMPUTE_LIMIT == 0
+        caplog.clear()
+        with caplog.at_level(logging.INFO, logger="crawler.scheduler"), patch.object(
+            fresh, "COMPLEX_METRIC_ENABLED", True
+        ):
+            scheduler = fresh.create_scheduler()
+        job = {j.id: j for j in scheduler.get_jobs()}["collect_metrics"]
+        assert job.kwargs["batch_size"] == 0
+        msgs = [r.getMessage() for r in caplog.records]
+        assert any("옛 설정 COMPLEX_METRIC_BATCH_SIZE" in m for m in msgs)
+        assert not any("1000" in m for m in msgs if "COMPLEX_METRIC_BATCH_SIZE" in m)
+    finally:
+        monkeypatch.delenv("COMPLEX_METRIC_BATCH_SIZE", raising=False)
+        importlib.reload(sched_mod)
 
 
 def test_complex_metric_runs_offpeak():

@@ -7,7 +7,7 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { TestQueryProvider } from "@/test-setup";
 
 import CompareCharts from "../CompareCharts";
-import CompareRadarChart from "../CompareRadarChart";
+import CompareRadarChart, { buildRadarData, formatRadarMissing } from "../CompareRadarChart";
 import ComparePriceTrendChart from "../ComparePriceTrendChart";
 import ComparePriceBarChart from "../ComparePriceBarChart";
 import CompareFloorChart from "../CompareFloorChart";
@@ -126,6 +126,105 @@ describe("CompareRadarChart", () => {
       <CompareRadarChart complexes={[makeComplex()]} />,
     );
     expect(container.innerHTML).toBe("");
+  });
+});
+
+/* ── CompareRadarChart 빈 값 처리 (세션 429) ── */
+
+describe("CompareRadarChart 빈 값 — 0점(꼴찌)으로 그리지 않는다", () => {
+  /** 축 이름으로 데이터 줄 찾기 */
+  function rowOf(data: ReturnType<typeof buildRadarData>["data"], label: string) {
+    const row = data.find((r) => r.axis === label);
+    if (!row) throw new Error(`축 없음: ${label}`);
+    return row;
+  }
+
+  it("'최근 거래' 축이 없다 — 기본 7축, 평당가가 붙으면 8축", () => {
+    const complexes = [makeComplex({ complex_no: "1" }), makeComplex({ complex_no: "2" })];
+    const base = buildRadarData(complexes);
+    expect(base.data.map((r) => r.axis)).not.toContain("최근 거래");
+    expect(base.data).toHaveLength(7);
+    expect(buildRadarData(complexes, { "1": 3000, "2": 4000 }).data).toHaveLength(8);
+  });
+
+  it("한 단지의 전세가율이 null 이면 그 축 그 단지 값은 null (0 아님), 다른 단지는 점수", () => {
+    const complexes = [
+      makeComplex({ complex_no: "1", complex_name: "래미안", jeonse_rate: undefined }),
+      makeComplex({ complex_no: "2", complex_name: "자이", jeonse_rate: 60 }),
+    ];
+    const row = rowOf(buildRadarData(complexes).data, "전세가율");
+    expect(row["1"]).toBeNull();
+    expect(row["2"]).toBe(100);
+  });
+
+  it("평당가가 없는 단지는 평당가 축 값이 null", () => {
+    const complexes = [makeComplex({ complex_no: "1" }), makeComplex({ complex_no: "2" })];
+    const row = rowOf(buildRadarData(complexes, { "2": 4000 }).data, "평당가");
+    expect(row["1"]).toBeNull();
+    expect(row["2"]).not.toBeNull();
+  });
+
+  it("그래프 아래 줄 = '자료 없음 — 단지명: 축 · 단지명: 축', 같은 단지 여러 축은 쉼표", () => {
+    const complexes = [
+      makeComplex({ complex_no: "1", complex_name: "래미안", jeonse_rate: undefined }),
+      makeComplex({ complex_no: "2", complex_name: "자이", parking_count_by_household: undefined }),
+    ];
+    render(<CompareRadarChart complexes={complexes} />);
+    expect(
+      screen.getByText("자료 없음 — 래미안: 전세가율 · 자이: 세대당 주차"),
+    ).toBeInTheDocument();
+
+    const many = buildRadarData([
+      makeComplex({ complex_no: "1", complex_name: "래미안", jeonse_rate: undefined, high_floor: undefined }),
+      makeComplex({ complex_no: "2", complex_name: "자이" }),
+    ]);
+    expect(formatRadarMissing(many.missing)).toBe("자료 없음 — 래미안: 전세가율, 최고층");
+  });
+
+  it("빈 값이 없으면 '자료 없음' 줄을 그리지 않는다", () => {
+    const complexes = [makeComplex({ complex_no: "1" }), makeComplex({ complex_no: "2" })];
+    render(<CompareRadarChart complexes={complexes} />);
+    expect(screen.queryByText(/자료 없음/)).toBeNull();
+  });
+
+  it("종합 우위는 모두 값이 있는 축만 더한다 — 빈 값을 0 으로 더하면 순위가 뒤집히는 예", () => {
+    // 래미안: 세대수 2000(100점), 전세가율 없음 / 자이: 세대수 1000(50점), 전세가율 60(100점)
+    // 빈 값을 0 으로 더하면 자이가 +50 앞선다. 모두 값이 있는 축만 보면 래미안이 +50 앞선다.
+    const complexes = [
+      makeComplex({ complex_no: "1", complex_name: "래미안", total_household_count: 2000, jeonse_rate: undefined }),
+      makeComplex({ complex_no: "2", complex_name: "자이", total_household_count: 1000, jeonse_rate: 60 }),
+    ];
+    expect(buildRadarData(complexes).bestName).toBe("래미안");
+  });
+
+  it("모두 값이 있는 축이 하나도 없으면 종합 우위 줄을 표시하지 않는다", () => {
+    const complexes: Complex[] = [
+      { complex_no: "1", complex_name: "래미안", total_household_count: 2000 },
+      { complex_no: "2", complex_name: "자이", parking_count_by_household: 1.5 },
+    ];
+    expect(buildRadarData(complexes).bestName).toBe("");
+    render(<CompareRadarChart complexes={complexes} />);
+    expect(screen.queryByText(/종합 우위/)).toBeNull();
+  });
+
+  it("50년 넘은 단지 신축도는 진짜 0 이고 빈 값 줄에 나오지 않는다", () => {
+    const complexes = [
+      makeComplex({ complex_no: "1", complex_name: "옛단지", use_approve_ymd: "19500101" }),
+      makeComplex({ complex_no: "2", complex_name: "새단지", use_approve_ymd: "20200101" }),
+    ];
+    const result = buildRadarData(complexes);
+    expect(rowOf(result.data, "신축도")["1"]).toBe(0);
+    expect(result.missing).toEqual([]);
+  });
+
+  it("준공일이 없으면 신축도는 빈 값", () => {
+    const complexes = [
+      makeComplex({ complex_no: "1", complex_name: "옛단지", use_approve_ymd: undefined }),
+      makeComplex({ complex_no: "2", complex_name: "새단지" }),
+    ];
+    const result = buildRadarData(complexes);
+    expect(rowOf(result.data, "신축도")["1"]).toBeNull();
+    expect(result.missing).toEqual([{ complexName: "옛단지", axes: ["신축도"] }]);
   });
 });
 

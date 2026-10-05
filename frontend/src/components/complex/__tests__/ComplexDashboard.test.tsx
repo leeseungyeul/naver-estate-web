@@ -89,7 +89,7 @@ describe("ComplexDashboard (v2)", () => {
 
     // 핵심 지표
     expect(screen.getByText(/전세가율 65%/)).toBeInTheDocument();
-    expect(screen.getByText("42건")).toBeInTheDocument();
+    expect(screen.getByText("매물 0건")).toBeInTheDocument();
     expect(screen.getByText("1,234세대")).toBeInTheDocument();
     expect(screen.getByText("2개 평형")).toBeInTheDocument();
   });
@@ -146,6 +146,29 @@ describe("ComplexDashboard (v2)", () => {
     // = 2곳 동시 노출 (의도된 fallback 일관성)
     const occurrences = screen.getAllByText("매물 46건");
     expect(occurrences.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("실거래가 칸: recent_trades_6m 이 있어도 '거래 N건'이 아니라 '매물 N건 · 현재 매물' (세션 429)", () => {
+    // recent_trades_6m 은 실제 거래 횟수가 아니라 시세 기록 줄 수 — 거래처럼 보이면 안 된다
+    mockUseComplexArticleAvg.mockReturnValue({
+      avgPrice: null,
+      count: 7,
+      isLoading: false,
+      isError: false,
+    });
+    render(
+      <ComplexDashboard
+        complex={{ ...baseComplex, recent_trades_6m: 42 }}
+        complexNo="C001"
+        pyeongDetails={samplePyeong}
+        sessionToken={undefined}
+        onFilterChange={() => {}}
+      />,
+    );
+    expect(screen.queryByText("42건")).toBeNull();
+    expect(screen.queryByText("최근 6개월")).toBeNull();
+    expect(screen.getByText("매물 7건")).toBeInTheDocument();
+    expect(screen.getByText("현재 매물")).toBeInTheDocument();
   });
 
   it("면적별 시세 펼친 후 안내 메시지 (평형 0건, F5 가드)", async () => {

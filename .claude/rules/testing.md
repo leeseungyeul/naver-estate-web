@@ -18,21 +18,7 @@
 3. **수정한 결함 자체를 직접 단언하는 회귀 테스트 신규 추가** — 사각이었으면 메우고, 박제였으면
    정정 + 경계값(예: 9억 게이트 양옆) 추가.
 
-> 사건: 세션 264 — 양도세 단기+중과 경합을 결함으로 오판(실제는 §104① 단서 의도된 max).
-> 세션 292(역방향) — 취득세 "다주택 60m² 면적무관 농특 부과"(line 261)·보유세 9억초과 1주택
-> SINGLE 단언(#2·#3·#CPC-2) 3건이 **실제 결함을 정답으로 박제**. 법령 확인(행안부 질의회신·
-> 지방세법 §111의2) 후 테스트 정정 + 회귀 신규. PR #147·#148.
->
-> 세션 384 — 법률 용어 하나를 잘못 해석해 결론이 한 번 뒤집힌 사례. 종부세 이중과세 공제
-> (시행령 §4의2) 판례 원문의 "재산세 **표준세율**로 계산한 재산세 상당액"이라는 문구를,
-> 처음엔 "표준세율=지자체 조례 가감 전 법정 기본세율"(조례 가감 여부와 무관, 누진 유지)로
-> 해석해 "기존 코드(누진공제 차감)가 맞다"고 오판했다. 그런데 elitelaw.kr 의 **구체적 숫자
-> 계산례**("④ 구간세율로 적용하지 않고(3억 초과 구간 570,000원 누진공제 더하지 않음) 표준
-> 세율만 적용")를 직접 대조하자 "표준세율=누진공제를 빼지 않고 세율만 곱하는 방식"이 맞다는
-> 게 드러나 결론이 뒤집혔다. 교훈: **법률 용어의 뜻은 사전적 정의나 다른 맥락(예: 지방세법
-> §111③ 조례 가감의 "표준세율")으로 유추하지 말고, 그 조문이 실제로 쓰이는 구체적 숫자
-> 계산례로 검증**해야 한다 — 같은 단어("표준세율")가 조문마다 다른 걸 가리킬 수 있다.
-> PR #423.
+(상세: .claude/rules-detail/testing.md §결함 박제 사건 (세션 264·292·384))
 
 ## effect 가드 플래그(isMounted 류) 컴포넌트는 `<StrictMode>` 래핑 케이스를 포함한다 (세션 395 답습)
 
@@ -45,8 +31,7 @@ React StrictMode(dev, App Router 기본 on)는 effect 를 mount→cleanup→moun
 1. `useRef(true)` + cleanup `false` 패턴이 있는 컴포넌트의 회귀 테스트에는 `render(<StrictMode><X/></StrictMode>)` 케이스를
    최소 1건 둔다(로그인 상태 등 비동기 후속의 결과가 화면에 보이는지 단언).
 2. 뮤테이션 검증: 재설정 줄(`ref.current = true`)을 제거하면 그 케이스가 FAIL 하는지 확인 후 복원.
-3. 선례 = `frontend/src/components/__tests__/Header.strictmode.test.tsx`(세션 395, next 16.3.4 admin E2E 회귀 근본수정 — E2E 는
-   dev 서버라 StrictMode 결함이 드러났고 prod 빌드는 이중 실행이 없어 사용자 영향 0 이었다).
+(상세: .claude/rules-detail/testing.md §StrictMode 선례 (세션 395))
 
 ## fixture 의 서로 다른 두 축이 우연히 같은 값이면 단위 오류를 못 잡는다 (세션 372 답습)
 
@@ -62,12 +47,7 @@ React StrictMode(dev, App Router 기본 on)는 effect 를 mount→cleanup→moun
    되돌려서 새 테스트가 실제로 실패하는지 확인한다. 통과하면 그 테스트는 이 결함을
    못 잡는 장식일 뿐이다. 되돌린 뒤에는 반드시 정확한 수정 코드로 복원.
 
-> 사건: 세션 372 — `service_official_price.py` silent-failure 가드가 `remaining`(법정동
-> 코드 리스트)을 "단지 수"라고 표시하는 단위 오류를, 기존 `seeded` fixture(단지1=법정동1)가
-> 숫자를 우연히 일치시켜 61개 테스트가 다 통과하는 채로 하루 넘게 방치했다. 적대검증
-> 워크플로우가 fixture 구조를 직접 읽어 이 함정을 지적, 단지 2개·법정동 1개인 새 fixture로
-> `test_collect_silent_failure_guard_counts_complexes_not_ld_codes` 를 추가하고 뮤테이션
-> 검증(수정 전 코드로 되돌리면 실제로 실패)까지 거쳐 PR #399 로 반영.
+(상세: .claude/rules-detail/testing.md §fixture 사건 (세션 372))
 
 ## 시각 회귀(toHaveScreenshot) — 정본은 `frontend/e2e/README.md` (세션 412 이동)
 
@@ -91,30 +71,10 @@ e2e spec 이나 baseline 을 고치기 전에 그 절을 읽는다. 여기 남�
 > 명령 = 루트 `CLAUDE.md` §커밋 전 필수 검증 참조 (SSOT 단일화).
 
 ### 레벨별 실행
-```bash
-# FE 전체
-cd frontend && npm test
-
-# BE 전체
-cd backend && python -m pytest
-
-# FE 특정 파일
-cd frontend && npx vitest run src/lib/__tests__/format.test.ts
-
-# BE 특정 파일/함수
-cd backend && python -m pytest tests/test_queries.py
-cd backend && python -m pytest tests/test_queries.py::test_search_complexes_by_name -v
-
-# E2E (서버 실행 필요)
-cd frontend && npx playwright test
-cd frontend && npx playwright test --headed  # 브라우저 보면서
-cd frontend && npx playwright test --ui      # 인터랙티브 모드
-```
+(상세: .claude/rules-detail/testing.md §레벨별 실행 명령)
 
 ### 결과 읽기
-- **Vitest**: checkmark = 통과, X = 실패 + expected/received diff
-- **pytest**: . = 통과, F = 실패, s = 스킵 + traceback
-- **Playwright**: PASS/FAIL + 실패 시 스크린샷 test-results/
+(상세: .claude/rules-detail/testing.md §결과 읽기)
 
 ### 테스트 구조
 

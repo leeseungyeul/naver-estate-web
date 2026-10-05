@@ -75,3 +75,17 @@ describe("InfoCards — #10 매물 상세 정보행", () => {
     expect(screen.queryByText("분양권 유형")).not.toBeInTheDocument();
   });
 });
+
+describe("InfoCards — 단지 정보 (세션 429)", () => {
+  it("recent_trades_6m 이 있어도 '최근6개월거래' 행 미표시 — 거래 횟수가 아니라 시세 기록 줄 수", () => {
+    render(
+      <InfoCards
+        article={makeArticle()}
+        complex={{ complex_no: "C001", complex_name: "테스트단지", recent_trades_6m: 42, jeonse_rate: 60 }}
+      />,
+    );
+    expect(screen.getByText("전세가율")).toBeInTheDocument();
+    expect(screen.queryByText("최근6개월거래")).not.toBeInTheDocument();
+    expect(screen.queryByText("42건")).not.toBeInTheDocument();
+  });
+});

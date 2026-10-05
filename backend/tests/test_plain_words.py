@@ -1025,6 +1025,23 @@ def test_kapt_match_costs_still_running_reason_kept_in_alert():
     assert explain_error(_MATCH_COSTS_RUNNING_WORDS) == _MATCH_COSTS_RUNNING_WORDS
 
 
+def test_complex_metric_no_recent_rows_reason_kept_in_alert():
+    """가치 점수 계산이 최근 6개월 시세 줄을 하나도 못 읽어 멈춘 사유는 알림에도 원문 그대로 (세션 428).
+
+    고정 문장("처음 보는 문제")으로 바뀌면 "시세 기록을 확인해 주세요" 안내가 사라진다.
+    사유 글자는 수집기 상수에서 가져온다 — 수집기 문구와 이 규칙의 머리말이 어긋나면 여기서 잡힌다.
+    뮤테이션: `_ERROR_RULES` 의 complex_metric 규칙을 빼면 FAIL.
+    """
+    from crawler.service_metrics import _NO_RECENT_ROWS_WORDS
+
+    assert explain_error(_NO_RECENT_ROWS_WORDS) == _NO_RECENT_ROWS_WORDS
+    assert explain_stored_error(_NO_RECENT_ROWS_WORDS) == _NO_RECENT_ROWS_WORDS
+    # 영문(개발자 원문)이 섞이면 원문 보존 규칙을 지나친다
+    assert explain_error(_NO_RECENT_ROWS_WORDS + " psycopg2 OperationalError") != (
+        _NO_RECENT_ROWS_WORDS + " psycopg2 OperationalError"
+    )
+
+
 def test_kapt_match_message_with_english_falls_to_unknown():
     """우리 문구 뒤에 영문(개발자 원문)이 섞이면 원문 보존 규칙을 지나쳐 고정 문장이 된다."""
     out = explain_error(f"{_KAPT_MATCH_NOTE} KaptApiError")

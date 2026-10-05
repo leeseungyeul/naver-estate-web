@@ -147,12 +147,12 @@ FRESHNESS_ITEMS: list[dict] = [
     },
     {
         # 세션 359: 17개 스케줄러 잡 전수조사에서 "시급하지 않음"으로 분류됐던
-        # 것을 사장님 지시("전체적으로 다 고쳐야")에 맞춰 마저 메운다. 매일 12시간
-        # interval 로 도는데 시세 이력이 없는 단지가 소진되면(nearby_median_price
+        # 것을 사장님 지시("전체적으로 다 고쳐야")에 맞춰 마저 메운다. 매일 04:30
+        # 에 도는데 시세 이력이 없는 단지가 소진되면(nearby_median_price
         # NULL 단지 고갈) 매번 0건만 처리해도 completed 로 조용히 끝날 수 있다.
         "key": "complex_metric",
         "label": "단지 가치 점수 계산",
-        "expected_interval_seconds": 43200 * 3,  # 12시간 interval 의 3배(36시간)
+        "expected_interval_seconds": 43200 * 3,  # 36시간 = 매일 04:30(24시간) + 12시간 여유
         "scheduler_job_id": "collect_metrics",
         "new_rows_kind": None,  # CrawlJob.completed_at 경유(childcare 패턴)
         "new_rows_expected": False,

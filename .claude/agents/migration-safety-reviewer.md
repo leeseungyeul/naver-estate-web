@@ -3,6 +3,7 @@ name: migration-safety-reviewer
 description: 공유 Supabase DB 스키마 변경(V*.sql 마이그레이션, db/models.py) 시 mibunyang 프로젝트 영향 + prod 컬럼 선행실행 게이트 + dialect 분기를 검증하는 read-only 리뷰어. Use proactively when backend/db/migrations/V*.sql 또는 backend/db/models.py 가 변경될 때.
 tools: Glob, Grep, Read
 model: opus
+effort: high
 ---
 
 # 공유 DB 마이그레이션 안전성 리뷰어
