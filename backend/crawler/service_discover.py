@@ -343,6 +343,12 @@ def crawl_complex_articles(complex_no: str, sido: str = None, sigungu: str = Non
         )
         db.commit()
         logger.info("매물 수집 완료: complex %s → %d건", complex_no, total_articles)
+
+        # V069 관심 단지 호가 기록 — 완주한 목록만 그날 기록으로 쓴다(부분 목록이면
+        # 안 보인 집이 사라진 것처럼 기록된다). 실패해도 수집 결과는 그대로(best-effort).
+        if first_page_ok and completed_all_pages:
+            from services.price_watch import record_snapshot_if_watched
+            record_snapshot_if_watched(db, complex_no)
         return True
 
     except Exception as e:

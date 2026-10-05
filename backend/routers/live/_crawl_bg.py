@@ -156,6 +156,11 @@ def _background_crawl(complex_no: str):
             )
             db.commit()
 
+            # V069 관심 단지 호가 기록 (완주한 목록만, best-effort — services/price_watch.py)
+            if completed_all_pages:
+                from services.price_watch import record_snapshot_if_watched
+                record_snapshot_if_watched(db, complex_no)
+
             # 단지정보 보강
             _update_crawl_status(complex_no, phase="enriching")
             cpx = db.query(ComplexModel).filter(ComplexModel.complex_no == complex_no).first()

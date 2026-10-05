@@ -572,3 +572,42 @@ class KaptManagementCost(Base):
     household_count: Mapped[int | None] = mapped_column(Integer)
     breakdown: Mapped[dict | None] = mapped_column(JSON)
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class PriceWatchTarget(Base):
+    """관심 호가 추적 대상 (V069) — 단지 + 전용면적(None = 전체 평형)."""
+
+    __tablename__ = "price_watch_targets"
+    __table_args__ = (
+        UniqueConstraint("user_id", "complex_no", "area_m2", name="uq_price_watch_target",
+                         postgresql_nulls_not_distinct=True),
+        Index("idx_price_watch_targets_complex", "complex_no"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    complex_no: Mapped[str] = mapped_column(String(20), nullable=False)
+    area_m2: Mapped[float | None] = mapped_column(Float)
+    label: Mapped[str | None] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class PriceWatchSnapshot(Base):
+    """관심 단지 활성 매매 매물의 날짜별(KST) 호가 기록 (V069). 하루 1행/매물."""
+
+    __tablename__ = "price_watch_snapshots"
+    __table_args__ = (
+        UniqueConstraint("snapshot_date", "article_no", name="uq_price_watch_snapshot"),
+        Index("idx_price_watch_snapshots_complex_date", "complex_no", "snapshot_date"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True)
+    snapshot_date: Mapped[date] = mapped_column(Date, nullable=False)
+    complex_no: Mapped[str] = mapped_column(String(20), nullable=False)
+    article_no: Mapped[str] = mapped_column(String(20), nullable=False)
+    building_name: Mapped[str | None] = mapped_column(String(50))
+    floor_info: Mapped[str | None] = mapped_column(String(20))
+    area1_m2: Mapped[float | None] = mapped_column(Float)
+    area2_m2: Mapped[float | None] = mapped_column(Float)
+    price: Mapped[int] = mapped_column(Integer, nullable=False)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

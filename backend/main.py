@@ -20,7 +20,21 @@ from starlette.responses import Response
 
 from auth.rate_limiter import RateLimitMiddleware
 from config.payment_flags import require_payment_enabled
-from routers import admin, articles, billing, complexes, health, live, mb, payment, regions, stats, users, verify
+from routers import (
+    admin,
+    articles,
+    billing,
+    complexes,
+    health,
+    live,
+    mb,
+    payment,
+    price_watch,
+    regions,
+    stats,
+    users,
+    verify,
+)
 from services.cache import get_dynamic_ttl
 
 # 로깅 설정
@@ -273,6 +287,7 @@ app.include_router(admin.router, prefix="/api/admin", tags=["관리자"])
 app.include_router(users.router, prefix="/api/users", tags=["사용자"])
 app.include_router(mb.router, prefix="/api/mb", tags=["미분양"])
 app.include_router(verify.router, prefix="/api/verify", tags=["중개사 검증"])
+app.include_router(price_watch.router, prefix="/api/price-watch", tags=["관심 단지 호가 추적"])
 # 결제·정기결제 라우터 — PAYMENT_ENABLED 게이트 (세션 400 무료 전환).
 #   꺼져 있으면(기본) 아래 7 엔드포인트 전부 403. 라우터 레벨 dependencies 는 엔드포인트
 #   인증 의존성보다 먼저 평가되므로 비로그인도 401 이 아니라 403 을 받는다.

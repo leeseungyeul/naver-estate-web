@@ -17,6 +17,12 @@ export const queryKeys = {
     types?: string,
   ) => ["regionSearch", sido, sigungu, dong, types] as const,
 
+  // 관심 단지 호가 추적 (V069)
+  priceWatchTargets: ["priceWatchTargets"] as const,
+  priceWatchAreas: (no: string) => ["priceWatchAreas", no] as const,
+  priceWatchUnits: (days: number, ids: string) => ["priceWatchUnits", days, ids] as const,
+  priceWatchBasket: (days: number, ids: string) => ["priceWatchBasket", days, ids] as const,
+
   // Complex
   complex: (no: string) => ["complex", no] as const,
   articles: (no: string, filters?: ArticleFilters, grouped?: boolean) =>

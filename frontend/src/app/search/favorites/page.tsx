@@ -23,9 +23,14 @@ export default function ArticleFavoritesPage() {
     <div className="max-w-7xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-gray-900">즐겨찾기 매물</h1>
-        <Link href="/search" className="text-sm text-blue-600 hover:underline">
-          &#8592; 검색으로
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/price-watch" className="text-sm text-blue-600 hover:underline">
+            관심 단지 호가 추적
+          </Link>
+          <Link href="/search" className="text-sm text-blue-600 hover:underline">
+            &#8592; 검색으로
+          </Link>
+        </div>
       </div>
 
       <ArticleFavoritesTab

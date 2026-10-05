@@ -1,5 +1,6 @@
 """단지 조회 쿼리"""
 
+import logging
 from datetime import timedelta
 from typing import Optional
 
@@ -8,6 +9,8 @@ from sqlalchemy.orm import Session
 
 from db.models import Article, Complex, ComplexPyeongDetail, SubwayStation
 from utils import utcnow
+
+logger = logging.getLogger(__name__)
 
 
 def get_all_subway_stations(db: Session):
@@ -232,13 +235,33 @@ def get_complexes_for_popular_crawl(db: Session, limit: int) -> list[Complex]:
     """
     cutoff = utcnow() - timedelta(days=7)
 
+    # V069 — 관심 호가 추적 단지 중 20시간 넘게 완주 수집이 없는 단지를 맨 앞에 둔다.
+    # 같은 limit 안에서 순서만 바꾸므로 회차당 네이버 호출 총량은 그대로다.
+    # 실패(예: V069 미적용 DB)해도 원래 선정으로 그대로 진행한다 — 인기 갱신 자체를 막지 않는다.
+    from services.price_watch import watched_complex_nos_needing_crawl
+    try:
+        # 관심 단지는 몫의 절반까지만 — "최근 조회" 단지가 통째로 밀려나지 않게
+        watched_nos = watched_complex_nos_needing_crawl(db, max(1, limit // 2))
+    except Exception as e:
+        logger.warning("관심 단지 우선 선정 건너뜀(원래 선정으로 진행): %s", e)
+        db.rollback()
+        watched_nos = []
+    watched_complexes = []
+    if watched_nos:
+        by_no = {c.complex_no: c for c in db.execute(
+            select(Complex).where(Complex.complex_no.in_(watched_nos))).scalars().all()}
+        watched_complexes = [by_no[no] for no in watched_nos if no in by_no]
+
     viewed_stmt = (
         select(Complex)
         .where(and_(Complex.last_viewed_at.isnot(None), Complex.last_viewed_at > cutoff))
         .order_by(Complex.last_viewed_at.desc())
         .limit(limit)
     )
-    viewed_complexes = list(db.execute(viewed_stmt).scalars().all())
+    if watched_nos:
+        viewed_stmt = viewed_stmt.where(Complex.complex_no.notin_(watched_nos))
+    viewed_complexes = watched_complexes + list(db.execute(viewed_stmt).scalars().all())
+    viewed_complexes = viewed_complexes[:limit]
 
     remaining = limit - len(viewed_complexes)
     if remaining <= 0:
